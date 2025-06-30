@@ -1,0 +1,573 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using AuthenticationApp.Models;
+using System.Security.Claims;
+
+namespace AuthenticationApp.Controllers
+{
+    [Authorize(Policy = "AdminOnly")]
+    public class UserManagementController : Controller
+    {
+        private readonly UserManager<IdentityUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly ILogger<UserManagementController> _logger;
+
+        public UserManagementController(
+            UserManager<IdentityUser> userManager,
+            RoleManager<IdentityRole> roleManager,
+            ILogger<UserManagementController> logger)
+        {
+            _userManager = userManager;
+            _roleManager = roleManager;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// User management dashboard with search and filtering
+        /// </summary>
+        public async Task<IActionResult> Index(UserSearchViewModel model)
+        {
+            try
+            {
+                // Initialize search model
+                if (model == null) model = new UserSearchViewModel();
+
+                // Build query
+                var query = _userManager.Users.AsQueryable();
+
+                // Apply search filters
+                if (!string.IsNullOrEmpty(model.SearchTerm))
+                {
+                    query = query.Where(u => 
+                        u.UserName.Contains(model.SearchTerm) ||
+                        u.Email.Contains(model.SearchTerm) ||
+                        u.PhoneNumber.Contains(model.SearchTerm));
+                }
+
+                // Apply status filters
+                if (model.AccountStatus.HasValue)
+                {
+                    switch (model.AccountStatus.Value)
+                    {
+                        case UserAccountStatus.Active:
+                            query = query.Where(u => !u.LockoutEnabled && u.EmailConfirmed);
+                            break;
+                        case UserAccountStatus.Disabled:
+                            query = query.Where(u => u.LockoutEnabled);
+                            break;
+                        case UserAccountStatus.Locked:
+                            query = query.Where(u => u.LockoutEnd > DateTimeOffset.UtcNow);
+                            break;
+                        case UserAccountStatus.Unverified:
+                            query = query.Where(u => !u.EmailConfirmed);
+                            break;
+                    }
+                }
+
+                if (model.ShowLockedOnly)
+                {
+                    query = query.Where(u => u.LockoutEnd > DateTimeOffset.UtcNow);
+                }
+
+                if (model.ShowUnverifiedOnly)
+                {
+                    query = query.Where(u => !u.EmailConfirmed);
+                }
+
+                // Get total count for pagination
+                model.TotalResults = await query.CountAsync();
+
+                // Apply pagination
+                var users = await query
+                    .Skip((model.CurrentPage - 1) * model.PageSize)
+                    .Take(model.PageSize)
+                    .ToListAsync();
+
+                // Convert to view models
+                model.Results = new List<UserSearchResultViewModel>();
+                foreach (var user in users)
+                {
+                    var userRoles = await _userManager.GetRolesAsync(user);
+                    model.Results.Add(new UserSearchResultViewModel
+                    {
+                        Id = user.Id,
+                        UserName = user.UserName ?? string.Empty,
+                        Email = user.Email ?? string.Empty,
+                        FullName = $"{user.UserName}",
+                        IsEnabled = !user.LockoutEnabled,
+                        EmailConfirmed = user.EmailConfirmed,
+                        IsLockedOut = user.LockoutEnd > DateTimeOffset.UtcNow,
+                        AccessFailedCount = user.AccessFailedCount,
+                        CreatedDate = DateTime.Now, // Would come from audit table in real app
+                        Roles = userRoles.ToList()
+                    });
+                }
+
+                // Populate filter dropdowns
+                model.AvailableRoles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
+                model.AvailableDepartments = new List<string> { "IT", "HR", "Finance", "Marketing", "Operations" };
+
+                _logger.LogInformation("User management dashboard accessed. Found {Count} users", model.TotalResults);
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading user management dashboard");
+                TempData["Error"] = "Error loading users. Please try again.";
+                return View(new UserSearchViewModel());
+            }
+        }
+
+        /// <summary>
+        /// Show create user form
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Create()
+        {
+            var model = new CreateUserViewModel
+            {
+                AvailableRoles = await GetAvailableRolesAsync()
+            };
+
+            return View(model);
+        }
+
+        /// <summary>
+        /// Create a new user
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(CreateUserViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                model.AvailableRoles = await GetAvailableRolesAsync();
+                return View(model);
+            }
+
+            try
+            {
+                // Check if user already exists
+                var existingUser = await _userManager.FindByEmailAsync(model.Email);
+                if (existingUser != null)
+                {
+                    ModelState.AddModelError("Email", "A user with this email already exists.");
+                    model.AvailableRoles = await GetAvailableRolesAsync();
+                    return View(model);
+                }
+
+                // Create new user
+                var user = new IdentityUser
+                {
+                    UserName = model.UserName,
+                    Email = model.Email,
+                    EmailConfirmed = model.EmailConfirmed,
+                    PhoneNumber = model.PhoneNumber,
+                    LockoutEnabled = !model.IsEnabled
+                };
+
+                var result = await _userManager.CreateAsync(user, model.Password);
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("New user created: {UserName} by admin: {Admin}", 
+                        user.UserName, User.Identity?.Name);
+
+                    // Assign selected roles
+                    if (model.SelectedRoles.Any())
+                    {
+                        await _userManager.AddToRolesAsync(user, model.SelectedRoles);
+                        _logger.LogInformation("Assigned roles {Roles} to user {UserName}", 
+                            string.Join(", ", model.SelectedRoles), user.UserName);
+                    }
+
+                    TempData["Success"] = $"User '{user.UserName}' created successfully.";
+                    return RedirectToAction(nameof(Details), new { id = user.Id });
+                }
+                else
+                {
+                    foreach (var error in result.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating user {Email}", model.Email);
+                ModelState.AddModelError(string.Empty, "An error occurred while creating the user.");
+            }
+
+            model.AvailableRoles = await GetAvailableRolesAsync();
+            return View(model);
+        }
+
+        /// <summary>
+        /// Show user details
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Details(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                var user = await _userManager.FindByIdAsync(id);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                var userRoles = await _userManager.GetRolesAsync(user);
+                var userClaims = await _userManager.GetClaimsAsync(user);
+
+                var model = new EditUserViewModel
+                {
+                    Id = user.Id,
+                    UserName = user.UserName ?? string.Empty,
+                    Email = user.Email ?? string.Empty,
+                    PhoneNumber = user.PhoneNumber,
+                    IsEnabled = !user.LockoutEnabled,
+                    EmailConfirmed = user.EmailConfirmed,
+                    PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                    TwoFactorEnabled = user.TwoFactorEnabled,
+                    LockoutEnabled = user.LockoutEnabled,
+                    LockoutEnd = user.LockoutEnd,
+                    AccessFailedCount = user.AccessFailedCount,
+                    CreatedDate = DateTime.Now, // Would come from audit table
+                    CurrentRoles = userRoles.ToList(),
+                    AvailableRoles = await GetAvailableRolesAsync()
+                };
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading user details for {UserId}", id);
+                TempData["Error"] = "Error loading user details.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        /// <summary>
+        /// Show edit user form
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Edit(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                var user = await _userManager.FindByIdAsync(id);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                var userRoles = await _userManager.GetRolesAsync(user);
+
+                var model = new EditUserViewModel
+                {
+                    Id = user.Id,
+                    UserName = user.UserName ?? string.Empty,
+                    Email = user.Email ?? string.Empty,
+                    PhoneNumber = user.PhoneNumber,
+                    IsEnabled = !user.LockoutEnabled,
+                    EmailConfirmed = user.EmailConfirmed,
+                    PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                    TwoFactorEnabled = user.TwoFactorEnabled,
+                    LockoutEnabled = user.LockoutEnabled,
+                    LockoutEnd = user.LockoutEnd,
+                    AccessFailedCount = user.AccessFailedCount,
+                    CurrentRoles = userRoles.ToList(),
+                    SelectedRoles = userRoles.ToList(),
+                    AvailableRoles = await GetAvailableRolesAsync()
+                };
+
+                // Mark selected roles
+                foreach (var role in model.AvailableRoles)
+                {
+                    role.IsSelected = model.CurrentRoles.Contains(role.RoleName);
+                }
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading edit form for user {UserId}", id);
+                TempData["Error"] = "Error loading user for editing.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        /// <summary>
+        /// Update user information
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(EditUserViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                model.AvailableRoles = await GetAvailableRolesAsync();
+                return View(model);
+            }
+
+            try
+            {
+                var user = await _userManager.FindByIdAsync(model.Id);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                // Update user properties
+                user.UserName = model.UserName;
+                user.Email = model.Email;
+                user.PhoneNumber = model.PhoneNumber;
+                user.EmailConfirmed = model.EmailConfirmed;
+                user.PhoneNumberConfirmed = model.PhoneNumberConfirmed;
+                user.TwoFactorEnabled = model.TwoFactorEnabled;
+                user.LockoutEnabled = !model.IsEnabled;
+
+                var result = await _userManager.UpdateAsync(user);
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("User {UserName} updated by admin {Admin}", 
+                        user.UserName, User.Identity?.Name);
+
+                    // Update roles
+                    var currentRoles = await _userManager.GetRolesAsync(user);
+                    var rolesToRemove = currentRoles.Except(model.SelectedRoles);
+                    var rolesToAdd = model.SelectedRoles.Except(currentRoles);
+
+                    if (rolesToRemove.Any())
+                    {
+                        await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
+                        _logger.LogInformation("Removed roles {Roles} from user {UserName}", 
+                            string.Join(", ", rolesToRemove), user.UserName);
+                    }
+
+                    if (rolesToAdd.Any())
+                    {
+                        await _userManager.AddToRolesAsync(user, rolesToAdd);
+                        _logger.LogInformation("Added roles {Roles} to user {UserName}", 
+                            string.Join(", ", rolesToAdd), user.UserName);
+                    }
+
+                    TempData["Success"] = $"User '{user.UserName}' updated successfully.";
+                    return RedirectToAction(nameof(Details), new { id = model.Id });
+                }
+                else
+                {
+                    foreach (var error in result.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user {UserId}", model.Id);
+                ModelState.AddModelError(string.Empty, "An error occurred while updating the user.");
+            }
+
+            model.AvailableRoles = await GetAvailableRolesAsync();
+            return View(model);
+        }
+
+        /// <summary>
+        /// Show password reset form
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> ResetPassword(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return NotFound();
+            }
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var model = new ResetPasswordViewModel
+            {
+                UserId = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty
+            };
+
+            return View(model);
+        }
+
+        /// <summary>
+        /// Reset user password
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            try
+            {
+                var user = await _userManager.FindByIdAsync(model.UserId);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                // Generate password reset token and reset password
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("Password reset for user {UserName} by admin {Admin}", 
+                        user.UserName, User.Identity?.Name);
+
+                    TempData["Success"] = $"Password reset successfully for user '{user.UserName}'.";
+                    return RedirectToAction(nameof(Details), new { id = model.UserId });
+                }
+                else
+                {
+                    foreach (var error in result.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password for user {UserId}", model.UserId);
+                ModelState.AddModelError(string.Empty, "An error occurred while resetting the password.");
+            }
+
+            return View(model);
+        }
+
+        /// <summary>
+        /// Toggle user lock status
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleLock(string id)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(id);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                var isLockedOut = await _userManager.IsLockedOutAsync(user);
+
+                if (isLockedOut)
+                {
+                    await _userManager.SetLockoutEndDateAsync(user, null);
+                    _logger.LogInformation("User {UserName} unlocked by admin {Admin}", 
+                        user.UserName, User.Identity?.Name);
+                    TempData["Success"] = $"User '{user.UserName}' has been unlocked.";
+                }
+                else
+                {
+                    await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(100));
+                    _logger.LogInformation("User {UserName} locked by admin {Admin}", 
+                        user.UserName, User.Identity?.Name);
+                    TempData["Success"] = $"User '{user.UserName}' has been locked.";
+                }
+
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling lock status for user {UserId}", id);
+                TempData["Error"] = "Error updating user lock status.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+        }
+
+        /// <summary>
+        /// Delete user (with confirmation)
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(string id)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(id);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                var result = await _userManager.DeleteAsync(user);
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("User {UserName} deleted by admin {Admin}", 
+                        user.UserName, User.Identity?.Name);
+                    TempData["Success"] = $"User '{user.UserName}' has been deleted.";
+                }
+                else
+                {
+                    TempData["Error"] = "Error deleting user.";
+                }
+
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user {UserId}", id);
+                TempData["Error"] = "Error deleting user.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Get available roles for selection
+        /// </summary>
+        private async Task<List<RoleSelectionViewModel>> GetAvailableRolesAsync()
+        {
+            var roles = await _roleManager.Roles.ToListAsync();
+            var roleViewModels = new List<RoleSelectionViewModel>();
+
+            foreach (var role in roles)
+            {
+                var usersInRole = await _userManager.GetUsersInRoleAsync(role.Name);
+                roleViewModels.Add(new RoleSelectionViewModel
+                {
+                    RoleId = role.Id,
+                    RoleName = role.Name ?? string.Empty,
+                    Description = $"Users with {role.Name} privileges",
+                    IsSystemRole = role.Name == "Admin" || role.Name == "USER",
+                    UserCount = usersInRole.Count
+                });
+            }
+
+            return roleViewModels.OrderBy(r => r.RoleName).ToList();
+        }
+
+        #endregion
+    }
+}

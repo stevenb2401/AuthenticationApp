@@ -3,10 +3,39 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
+using AuthenticationApp.Data;
+using AuthenticationApp.Models;
+using AuthenticationApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Authentication with OpenID Connect and Role Claims
+// DEBUG: Check configuration loading
+Console.WriteLine("=== Configuration Debug ===");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+Console.WriteLine($"Connection string found: {!string.IsNullOrEmpty(connectionString)}");
+Console.WriteLine($"Connection string: {connectionString}");
+Console.WriteLine("=== End Debug ===");
+
+// Register DbContext with connection string
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."),
+    sqlOptions => sqlOptions.EnableRetryOnFailure()));
+
+// Register Identity services
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
+{
+    // Password settings
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
+// Authentication with OpenID Connect
 builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
     .EnableTokenAcquisitionToCallDownstreamApi(new[] { "User.Read" })
@@ -14,60 +43,128 @@ builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
 
 builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
 {
-    options.TokenValidationParameters.RoleClaimType = "roles"; // Ensure roles are mapped correctly
+    options.TokenValidationParameters.RoleClaimType = "roles";
 });
 
-// Configure cookie settings to handle unauthenticated users
+// Configure cookie settings
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.LoginPath = "/signin"; // Redirect unauthenticated users to /signin
-    options.AccessDeniedPath = "/Account/AccessDenied"; // Redirect unauthorized users to AccessDenied
+    options.LoginPath = "/signin";
+    options.AccessDeniedPath = "/Account/AccessDenied";
 });
 
-// Register Identity services with Entity Framework
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-    sqlOptions => sqlOptions.EnableRetryOnFailure()));
+// REGISTER AUTHORIZATION HANDLERS for Task 2A
+builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, TenantAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, ClaimAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, DepartmentAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, BusinessHoursAuthorizationHandler>();
 
-builder.Services.AddIdentity<IdentityUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+// CONFIGURE AUTHORIZATION POLICIES for Task 2A
+builder.Services.AddAuthorization(options =>
+{
+    // Default policy requires authentication
+    options.FallbackPolicy = options.DefaultPolicy;
 
-// Custom claims transformation
-builder.Services.AddTransient<IClaimsTransformation, CustomRoleClaimsTransformer>();
+    // ROLE-BASED POLICIES
+    options.AddPolicy("AdminOnly", policy =>
+        policy.AddRequirements(new RoleRequirement(new[] { "Admin", "Administrator", "Global Administrator" })));
+
+    options.AddPolicy("ManagerOrAdmin", policy =>
+        policy.AddRequirements(new RoleRequirement(new[] { "Manager", "Admin", "Administrator" })));
+
+    options.AddPolicy("HR_Access", policy =>
+        policy.AddRequirements(new RoleRequirement(new[] { "HR", "Human Resources", "HR Manager" })));
+
+    // DEPARTMENT-BASED POLICIES
+    options.AddPolicy("IT_Department", policy =>
+        policy.AddRequirements(new DepartmentRequirement("IT", "Information Technology", "Technical")));
+
+    options.AddPolicy("Finance_Department", policy =>
+        policy.AddRequirements(new DepartmentRequirement("Finance", "Accounting", "Financial")));
+
+    // BUSINESS HOURS POLICY
+    options.AddPolicy("BusinessHours", policy =>
+        policy.AddRequirements(new BusinessHoursRequirement(
+            new TimeSpan(9, 0, 0),  // 9:00 AM
+            new TimeSpan(17, 0, 0), // 5:00 PM
+            DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday)));
+
+    // COMBINED POLICIES
+    options.AddPolicy("AdminBusinessHours", policy =>
+    {
+        policy.AddRequirements(new RoleRequirement(new[] { "Admin", "Administrator" }));
+        policy.AddRequirements(new BusinessHoursRequirement(
+            new TimeSpan(8, 0, 0),
+            new TimeSpan(18, 0, 0),
+            DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday));
+    });
+
+    // CLAIM-BASED POLICIES
+    options.AddPolicy("VerifiedUsers", policy =>
+        policy.AddRequirements(new ClaimRequirement("email_verified", "true")));
+
+    // TENANT-SPECIFIC POLICY
+    var tenantId = builder.Configuration["AzureAd:TenantId"] ?? "your-tenant-id-here";
+    options.AddPolicy("SpecificTenant", policy =>
+        policy.AddRequirements(new TenantRequirement(tenantId)));
+
+    // ADDITIONAL POLICIES for your existing Identity setup
+    options.AddPolicy("LocalAdminOnly", policy =>
+        policy.RequireRole("Admin")); // Uses ASP.NET Identity roles
+
+    options.AddPolicy("LocalUserOnly", policy =>
+        policy.RequireRole("USER", "Admin")); // Uses ASP.NET Identity roles
+});
 
 // Add MVC Controllers with Views
 builder.Services.AddControllersWithViews();
 
+// Add logging for debugging authorization
+builder.Services.AddLogging(logging =>
+{
+    logging.AddConsole();
+    logging.AddDebug();
+    if (builder.Environment.IsDevelopment())
+    {
+        logging.SetMinimumLevel(LogLevel.Debug);
+    }
+});
+
 var app = builder.Build();
 
-// Ensure roles and user assignment at startup
+// Create database and seed roles
 using (var scope = app.Services.CreateScope())
 {
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
-    // Define roles
-    string adminRole = "Admin";
-    string userRole = "USER"; // Define user role
-
-    // Ensure the Admin role exists
-    if (!await roleManager.RoleExistsAsync(adminRole))
+    // Ensure database is created
+    try
     {
-        await roleManager.CreateAsync(new IdentityRole(adminRole));
-        Console.WriteLine($"Role '{adminRole}' has been created.");
+        context.Database.EnsureCreated();
+        Console.WriteLine("Database created/verified successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database creation error: {ex.Message}");
     }
 
-    // Ensure the User role exists
-    if (!await roleManager.RoleExistsAsync(userRole))
+    // Create roles - Enhanced for Task 2A
+    string[] roles = { "Admin", "USER", "Manager", "HR", "HR Manager" };
+    foreach (var role in roles)
     {
-        await roleManager.CreateAsync(new IdentityRole(userRole));
-        Console.WriteLine($"Role '{userRole}' has been created.");
+        if (!await roleManager.RoleExistsAsync(role))
+        {
+            await roleManager.CreateAsync(new IdentityRole(role));
+            Console.WriteLine($"Role '{role}' created.");
+        }
     }
 
-    // Define Admin user details
-    string adminEmail = "stevenbyrne243@gmail.com"; // Replace with your desired admin email
-    string adminPassword = "P@$$w0rd01"; // Replace with your desired admin password
+    // Create admin user
+    string adminEmail = "stevenbyrne243@gmail.com";
+    string adminPassword = "P@$$w0rd01";
 
     var adminUser = await userManager.FindByEmailAsync(adminEmail);
     if (adminUser == null)
@@ -79,73 +176,16 @@ using (var scope = app.Services.CreateScope())
             EmailConfirmed = true
         };
 
-        var createUserResult = await userManager.CreateAsync(adminUser, adminPassword);
-        if (createUserResult.Succeeded)
+        var result = await userManager.CreateAsync(adminUser, adminPassword);
+        if (result.Succeeded)
         {
-            Console.WriteLine($"Admin user '{adminEmail}' has been created.");
+            await userManager.AddToRoleAsync(adminUser, "Admin");
+            Console.WriteLine($"Admin user created and assigned Admin role.");
         }
         else
         {
-            foreach (var error in createUserResult.Errors)
-            {
-                Console.WriteLine($"Error creating admin user: {error.Description}");
-            }
+            Console.WriteLine($"Error creating admin user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
         }
-    }
-
-    if (!await userManager.IsInRoleAsync(adminUser, adminRole))
-    {
-        await userManager.AddToRoleAsync(adminUser, adminRole);
-        Console.WriteLine($"Admin user '{adminEmail}' has been assigned the '{adminRole}' role.");
-    }
-
-    // Define User details (optional: seed a default user)
-    string userEmail = "defaultuser@example.com"; // Replace with your desired user email
-    string userPassword = "User@123"; // Replace with your desired user password
-
-    var user = await userManager.FindByEmailAsync(userEmail);
-    if (user == null)
-    {
-        user = new IdentityUser
-        {
-            UserName = userEmail,
-            Email = userEmail,
-            EmailConfirmed = true
-        };
-
-        var createUserResult = await userManager.CreateAsync(user, userPassword);
-        if (createUserResult.Succeeded)
-        {
-            Console.WriteLine($"User '{userEmail}' has been created.");
-        }
-        else
-        {
-            foreach (var error in createUserResult.Errors)
-            {
-                Console.WriteLine($"Error creating user: {error.Description}");
-            }
-        }
-    }
-
-    if (!await userManager.IsInRoleAsync(user, userRole))
-    {
-        await userManager.AddToRoleAsync(user, userRole);
-        Console.WriteLine($"User '{userEmail}' has been assigned the '{userRole}' role.");
-    }
-
-    // Debug roles
-    var fetchedAdminUser = await userManager.FindByEmailAsync(adminEmail);
-    if (fetchedAdminUser != null)
-    {
-        var adminRoles = await userManager.GetRolesAsync(fetchedAdminUser);
-        Console.WriteLine($"Admin user roles: {string.Join(", ", adminRoles)}");
-    }
-
-    var fetchedUser = await userManager.FindByEmailAsync(userEmail);
-    if (fetchedUser != null)
-    {
-        var userRoles = await userManager.GetRolesAsync(fetchedUser);
-        Console.WriteLine($"Default user roles: {string.Join(", ", userRoles)}");
     }
 }
 
@@ -155,29 +195,76 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+else
+{
+    // DEBUGGING: Add route debugging in development for Task 2A
+    app.MapGet("/debug/routes", (LinkGenerator linkGenerator) => 
+    {
+        var routes = new List<string>
+        {
+            linkGenerator.GetPathByAction("Index", "AuthorizationTest"),
+            linkGenerator.GetPathByAction("AdminOnly", "AuthorizationTest"),
+            linkGenerator.GetPathByAction("Details", "Profile"),
+            linkGenerator.GetPathByAction("Index", "Home")
+        };
+        return Results.Json(routes);
+    });
 
-// HTTPS Redirection
+    // Debug authorization policies
+    app.MapGet("/debug/policies", (IAuthorizationPolicyProvider policyProvider) =>
+    {
+        var policies = new[]
+        {
+            "AdminOnly", "ManagerOrAdmin", "HR_Access", "IT_Department", 
+            "Finance_Department", "BusinessHours", "AdminBusinessHours", 
+            "VerifiedUsers", "LocalAdminOnly", "LocalUserOnly"
+        };
+        return Results.Json(policies);
+    });
+}
+
 app.UseHttpsRedirection();
-
-// Static file serving
 app.UseStaticFiles();
-
-// Routing
 app.UseRouting();
 
-// Authentication and Authorization Middleware
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Route configuration: Set up routing for `/signin` and default routes
+// ENHANCED ROUTING for Task 2A
 app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    name: "authorisation_test",
+    pattern: "AuthorisationTest/{action=Index}",
+    defaults: new { controller = "AuthorisationTest" });
+
+app.MapControllerRoute(
+    name: "admin",
+    pattern: "Admin/{action=Index}",
+    defaults: new { controller = "Admin" });
+
+app.MapControllerRoute(
+    name: "profile_default",
+    pattern: "Profile",
+    defaults: new { controller = "Profile", action = "Index" });
+
+app.MapControllerRoute(
+    name: "profile",
+    pattern: "Profile/{action=Index}",
+    defaults: new { controller = "Profile" });
 
 app.MapControllerRoute(
     name: "signin",
     pattern: "signin",
     defaults: new { controller = "Account", action = "Login" });
 
+// DEFAULT ROUTE MUST BE LAST
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");  
+
+Console.WriteLine("=== Authorization Policies Configured ===");
+Console.WriteLine("Available policies: AdminOnly, ManagerOrAdmin, HR_Access, IT_Department, Finance_Department, BusinessHours, AdminBusinessHours, VerifiedUsers");
+Console.WriteLine("Test URL: /AuthorizationTest");
+Console.WriteLine("Debug URLs: /debug/routes, /debug/policies");
+Console.WriteLine("=== End Authorization Debug ===");
 
 app.Run();

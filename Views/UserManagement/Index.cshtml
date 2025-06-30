@@ -1,0 +1,208 @@
+@model AuthenticationApp.Models.UserSearchViewModel
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-users-cog"></i> User Management</h1>
+                <div>
+                    <a href="@Url.Action("Create", "UserManagement")" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Create New User
+                    </a>
+                </div>
+            </div>
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle"></i> @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i> @TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <!-- Search and Filter Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-search"></i> Search & Filter Users</h5>
+                </div>
+                <div class="card-body">
+                    @using (Html.BeginForm("Index", "UserManagement", FormMethod.Get, new { @class = "row g-3" }))
+                    {
+                        <div class="col-md-4">
+                            @Html.TextBoxFor(m => m.SearchTerm, new { @class = "form-control", placeholder = "Search users..." })
+                        </div>
+                        <div class="col-md-3">
+                            @Html.DropDownListFor(m => m.SelectedRole, 
+                                new SelectList(Model.AvailableRoles.Prepend("All Roles"), "All Roles"), 
+                                new { @class = "form-select" })
+                        </div>
+                        <div class="col-md-3">
+                            @Html.DropDownListFor(m => m.AccountStatus, 
+                                Html.GetEnumSelectList<AuthenticationApp.Models.UserAccountStatus>(), 
+                                "All Status", new { @class = "form-select" })
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Results Summary -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted">
+                                Showing @Model.Results.Count of @Model.TotalResults users
+                                @if (!string.IsNullOrEmpty(Model.SearchTerm))
+                                {
+                                    <span>for "<strong>@Model.SearchTerm</strong>"</span>
+                                }
+                            </span>
+                        </div>
+                        <div>
+                            Page @Model.CurrentPage of @Model.TotalPages
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Table -->
+            <div class="card">
+                <div class="card-body">
+                    @if (Model.Results.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th>Roles</th>
+                                        <th>Last Login</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var user in Model.Results)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>
+                                                    <strong>@user.UserName</strong>
+                                                    @if (!string.IsNullOrEmpty(user.FullName) && user.FullName != user.UserName)
+                                                    {
+                                                        <br><small class="text-muted">@user.FullName</small>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @user.Email
+                                                @if (user.EmailConfirmed)
+                                                {
+                                                    <i class="fas fa-check-circle text-success" title="Email verified"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="fas fa-exclamation-triangle text-warning" title="Email not verified"></i>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge @user.AccountStatusBadgeClass">@user.AccountStatus</span>
+                                                @if (user.AccessFailedCount > 0)
+                                                {
+                                                    <br><small class="text-danger">@user.AccessFailedCount failed attempts</small>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (user.Roles.Any())
+                                                {
+                                                    @foreach (var role in user.Roles)
+                                                    {
+                                                        <span class="badge bg-primary me-1">@role</span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">No roles</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (user.LastLoginDate.HasValue)
+                                                {
+                                                    @user.LastLoginDate.Value.ToString("MMM dd, yyyy")
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Never</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="@Url.Action("Details", new { id = user.Id })" 
+                                                       class="btn btn-sm btn-outline-primary" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="@Url.Action("Edit", new { id = user.Id })" 
+                                                       class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        @if (Model.TotalPages > 1)
+                        {
+                            <nav aria-label="User pagination">
+                                <ul class="pagination justify-content-center">
+                                    @for (int i = 1; i <= Model.TotalPages; i++)
+                                    {
+                                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                            <a class="page-link" href="@Url.Action("Index", new { 
+                                                currentPage = i, 
+                                                searchTerm = Model.SearchTerm, 
+                                                selectedRole = Model.SelectedRole,
+                                                accountStatus = Model.AccountStatus 
+                                            })">@i</a>
+                                        </li>
+                                    }
+                                </ul>
+                            </nav>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">No users found</h4>
+                            <p class="text-muted">Try adjusting your search criteria or create a new user.</p>
+                            <a href="@Url.Action("Create")" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Create First User
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
