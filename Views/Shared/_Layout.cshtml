@@ -1,0 +1,147 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] ?? "Default Title" - Authentication_App</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/Authentication_App.styles.css" asp-append-version="true" />
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    Authentication_App
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse">
+                    <!-- Left-side navigation links -->
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">
+                                <i class="fas fa-home"></i> Home
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">
+                                <i class="fas fa-shield-alt"></i> Privacy
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Reports" asp-action="Index">
+                                <i class="fas fa-chart-bar"></i> Reports
+                            </a>
+                        </li>
+
+                        <!-- User Profile (for authenticated users) -->
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Profile" asp-action="Index">
+                                    <i class="fas fa-user"></i> My Profile
+                                </a>
+                            </li>
+                        }
+
+                        <!-- Admin-only navigation -->
+                        @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin"))
+                        {
+                            <!-- Admin Dashboard -->
+                            <li class="nav-item">
+                                <a class="nav-link text-danger fw-bold" asp-controller="Admin" asp-action="Index">
+                                    <i class="fas fa-cog"></i> Admin Dashboard
+                                </a>
+                            </li>
+                            
+                            <!-- Authorization Tests -->
+                            <li class="nav-item">
+                                <a class="nav-link text-warning" asp-controller="AuthorisationTest" asp-action="Index">
+                                    <i class="fas fa-vial"></i> Auth Tests
+                                </a>
+                            </li>
+
+                            <!-- Admin Reports -->
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Reports" asp-action="AdminReports">
+                                    <i class="fas fa-chart-line"></i> Admin Reports
+                                </a>
+                            </li>
+                            
+                            <!-- User Management -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" id="userManagementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-users-cog"></i> User Management
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="userManagementDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="User" asp-action="CreateUser">
+                                            <i class="fas fa-user-plus"></i> Create User
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="User" asp-action="UserList">
+                                            <i class="fas fa-list"></i> Manage Users
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                    </ul>
+                    
+                    <!-- Right-side authentication controls -->
+                    <ul class="navbar-nav ms-auto">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <span class="nav-link text-success">
+                                    <i class="fas fa-user-check"></i> Hello, @User.Identity.Name!
+                                </span>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" href="/logout">
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" href="/signin">
+                                    <i class="fas fa-sign-in-alt"></i> Login
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2025 - Authentication_App - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <!-- Render validation scripts from partial -->
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

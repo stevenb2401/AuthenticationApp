@@ -1,0 +1,23 @@
+﻿@page
+@{
+    //ViewData["Title"] = "Reports";
+}
+
+<h1>Reports</h1>
+<p>Welcome to the Reports page.</p>
+<p>This page has been created with the purpose of seperating the actions of a simple User and and Administrator.</p>
+<p>In a real use case, the content of this page would be accessible to all users. But, role-based reports would requrie the user to have the neccesary role or permissions.</p>
+<p>In this case that would be the Admin Reports page requiring the Admin role.</p>
+
+
+
+@if (User.IsInRole("Admin"))
+{
+    <p>
+        <a href="/Reports/AdminReports" class="btn btn-primary">Go to Admin Reports</a>
+    </p>
+}
+else
+{
+    <p class="text-danger">Admin Reports are only accessible to administrators.</p>
+}

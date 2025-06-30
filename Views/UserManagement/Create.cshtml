@@ -1,0 +1,131 @@
+@model AuthenticationApp.Models.CreateUserViewModel
+@{
+    ViewData["Title"] = "Create New User";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-user-plus"></i> Create New User</h4>
+                </div>
+                <div class="card-body">
+                    @using (Html.BeginForm("Create", "UserManagement", FormMethod.Post, new { @class = "needs-validation", novalidate = "novalidate" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        
+                        @if (ViewData.ModelState.ErrorCount > 0)
+                        {
+                            <div class="alert alert-danger">
+                                <ul class="mb-0">
+                                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                                    {
+                                        <li>@error.ErrorMessage</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Basic Information</h5>
+                                
+                                <div class="mb-3">
+                                    @Html.LabelFor(m => m.UserName, new { @class = "form-label" })
+                                    @Html.TextBoxFor(m => m.UserName, new { @class = "form-control", required = "required" })
+                                    @Html.ValidationMessageFor(m => m.UserName, "", new { @class = "invalid-feedback" })
+                                </div>
+
+                                <div class="mb-3">
+                                    @Html.LabelFor(m => m.Email, new { @class = "form-label" })
+                                    @Html.TextBoxFor(m => m.Email, new { @class = "form-control", type = "email", required = "required" })
+                                    @Html.ValidationMessageFor(m => m.Email, "", new { @class = "invalid-feedback" })
+                                </div>
+
+                                <div class="mb-3">
+                                    @Html.LabelFor(m => m.PhoneNumber, new { @class = "form-label" })
+                                    @Html.TextBoxFor(m => m.PhoneNumber, new { @class = "form-control", type = "tel" })
+                                    @Html.ValidationMessageFor(m => m.PhoneNumber, "", new { @class = "invalid-feedback" })
+                                </div>
+
+                                <div class="mb-3">
+                                    @Html.LabelFor(m => m.FirstName, new { @class = "form-label" })
+                                    @Html.TextBoxFor(m => m.FirstName, new { @class = "form-control" })
+                                </div>
+
+                                <div class="mb-3">
+                                    @Html.LabelFor(m => m.LastName, new { @class = "form-label" })
+                                    @Html.TextBoxFor(m => m.LastName, new { @class = "form-control" })
+                                </div>
+                            </div>
+
+                            <!-- Security & Roles -->
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Security & Access</h5>
+                                
+                                <div class="mb-3">
+                                    @Html.LabelFor(m => m.Password, new { @class = "form-label" })
+                                    @Html.PasswordFor(m => m.Password, new { @class = "form-control", required = "required" })
+                                    @Html.ValidationMessageFor(m => m.Password, "", new { @class = "invalid-feedback" })
+                                </div>
+
+                                <div class="mb-3">
+                                    @Html.LabelFor(m => m.ConfirmPassword, new { @class = "form-label" })
+                                    @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control", required = "required" })
+                                    @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "invalid-feedback" })
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Account Settings</label>
+                                    <div class="form-check">
+                                        @Html.CheckBoxFor(m => m.IsEnabled, new { @class = "form-check-input" })
+                                        @Html.LabelFor(m => m.IsEnabled, new { @class = "form-check-label" })
+                                    </div>
+                                    <div class="form-check">
+                                        @Html.CheckBoxFor(m => m.EmailConfirmed, new { @class = "form-check-input" })
+                                        @Html.LabelFor(m => m.EmailConfirmed, new { @class = "form-check-label" })
+                                    </div>
+                                    <div class="form-check">
+                                        @Html.CheckBoxFor(m => m.RequirePasswordChange, new { @class = "form-check-input" })
+                                        @Html.LabelFor(m => m.RequirePasswordChange, new { @class = "form-check-label" })
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Assign Roles</label>
+                                    @if (Model.AvailableRoles.Any())
+                                    {
+                                        @for (int i = 0; i < Model.AvailableRoles.Count; i++)
+                                        {
+                                            <div class="form-check">
+                                                @Html.CheckBoxFor(m => m.AvailableRoles[i].IsSelected, new { @class = "form-check-input" })
+                                                @Html.LabelFor(m => m.AvailableRoles[i].IsSelected, Model.AvailableRoles[i].RoleName, new { @class = "form-check-label" })
+                                                @Html.HiddenFor(m => m.AvailableRoles[i].RoleName)
+                                                @Html.HiddenFor(m => m.AvailableRoles[i].RoleId)
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="@Url.Action("Index")" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left"></i> Back to Users
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Create User
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

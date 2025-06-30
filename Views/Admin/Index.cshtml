@@ -1,0 +1,197 @@
+@model AuthenticationApp.Models.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+            <p class="text-muted">Welcome to the administrative control panel</p>
+            
+            @if (!string.IsNullOrEmpty(ViewBag.Error))
+            {
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> @ViewBag.Error
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h2 class="card-title">@Model.TotalUsers</h2>
+                    <p class="card-text">Total Users</p>
+                    <i class="fas fa-users fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h2 class="card-title">@Model.TotalRoles</h2>
+                    <p class="card-text">System Roles</p>
+                    <i class="fas fa-user-tag fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Users -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-user-plus"></i> Recent Users</h4>
+                </div>
+                <div class="card-body">
+                    @if (Model.RecentUsers.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th>Failed Attempts</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var user in Model.RecentUsers)
+                                    {
+                                        <tr>
+                                            <td>@user.UserName</td>
+                                            <td>
+                                                @user.Email
+                                                @if (user.EmailConfirmed)
+                                                {
+                                                    <i class="fas fa-check-circle text-success" title="Email confirmed"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="fas fa-exclamation-triangle text-warning" title="Email not confirmed"></i>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge @(user.LockoutEnabled ? "bg-warning" : "bg-success")">
+                                                    @(user.LockoutEnabled ? "Lockout Enabled" : "Active")
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @if (user.AccessFailedCount > 0)
+                                                {
+                                                    <span class="badge bg-danger">@user.AccessFailedCount</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">0</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No users found.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Info -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-user-shield"></i> Your Admin Status</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Logged in as:</strong><br>@User.Identity?.Name</p>
+                    
+                    <p><strong>Your Roles:</strong></p>
+                    @if (Model.CurrentAdminRoles.Any())
+                    {
+                        @foreach (var role in Model.CurrentAdminRoles)
+                        {
+                            <span class="badge bg-primary me-1 mb-1">@role</span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="text-muted">No roles assigned</span>
+                    }
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5><i class="fas fa-users-cog"></i> System Roles</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.SystemRoles.Any())
+                    {
+                        @foreach (var role in Model.SystemRoles)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>@role.Name</span>
+                                @if (Model.CurrentAdminRoles.Contains(role.Name))
+                                {
+                                    <i class="fas fa-check-circle text-success" title="You have this role"></i>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">No roles configured.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h4><i class="fas fa-tools"></i> Quick Actions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <a href="@Url.Action("Index", "AuthorisationTest")" class="btn btn-outline-info">
+                            <i class="fas fa-vial"></i> Test Authorisation
+                        </a>
+                        <a href="@Url.Action("Details", "Profile")" class="btn btn-outline-secondary">
+                            <i class="fas fa-user"></i> My Profile
+                        </a>
+                        <a href="@Url.Action("Index", "Home")" class="btn btn-outline-primary">
+                            <i class="fas fa-home"></i> Back to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.2s;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .opacity-75 {
+        opacity: 0.75;
+    }
+</style>

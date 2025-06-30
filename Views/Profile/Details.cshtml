@@ -1,0 +1,128 @@
+@using AuthenticationApp.Models
+@model UserProfileViewModel
+@{
+    ViewData["Title"] = "User Profile";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-user"></i> User Profile</h2>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(ViewBag.Error as string))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @ViewBag.Error
+                        </div>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Basic Information</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Display Name:</strong></td>
+                                    <td>@Model.DisplayName</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td>@Model.Email</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td>
+                                        <span class="badge @(Model.IsAuthenticated ? "bg-success" : "bg-danger")">
+                                            @Model.AuthenticationStatusDisplay
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Organization Information</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Job Title:</strong></td>
+                                    <td>@(!string.IsNullOrEmpty(Model.JobTitle) ? Model.JobTitle : "Not specified")</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Department:</strong></td>
+                                    <td>@(!string.IsNullOrEmpty(Model.Department) ? Model.Department : "Not specified")</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5>User Roles</h5>
+                            @if (Model.Roles.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var role in Model.Roles)
+                                    {
+                                        <span class="badge bg-primary">@role</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No roles assigned</p>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5>Technical Information</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>User ID:</strong></td>
+                                    <td><code>@Model.ObjectId</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Tenant ID:</strong></td>
+                                    <td><code>@Model.TenantId</code></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="@Url.Action("Claims", "Profile")" class="btn btn-info">
+                            <i class="fas fa-list"></i> View All Claims
+                        </a>
+                        <a href="@Url.Action("DebugClaims", "Profile")" class="btn btn-secondary">
+                            <i class="fas fa-bug"></i> Debug Claims
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.HasAdminRole)
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-shield-alt"></i> You have administrative privileges
+                        </div>
+                    }
+                    
+                    <a href="@Url.Action("Index", "Home")" class="btn btn-outline-primary">
+                        <i class="fas fa-home"></i> Back to Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
