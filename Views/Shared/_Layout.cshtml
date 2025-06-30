@@ -15,7 +15,7 @@
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
-                    Authentication_App
+                    <i class="fas fa-shield-alt text-primary"></i> Authentication_App
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                         data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
@@ -35,11 +35,6 @@
                                 <i class="fas fa-shield-alt"></i> Privacy
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Reports" asp-action="Index">
-                                <i class="fas fa-chart-bar"></i> Reports
-                            </a>
-                        </li>
 
                         <!-- User Profile (for authenticated users) -->
                         @if (User.Identity?.IsAuthenticated == true)
@@ -47,6 +42,13 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-controller="Profile" asp-action="Index">
                                     <i class="fas fa-user"></i> My Profile
+                                </a>
+                            </li>
+
+                            <!-- Reports for authenticated users -->
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Reports" asp-action="Index">
+                                    <i class="fas fa-chart-bar"></i> Reports
                                 </a>
                             </li>
                         }
@@ -61,26 +63,17 @@
                                 </a>
                             </li>
                             
-                            <!-- Authorization Tests -->
-                            <li class="nav-item">
-                                <a class="nav-link text-warning" asp-controller="AuthorisationTest" asp-action="Index">
-                                    <i class="fas fa-vial"></i> Auth Tests
-                                </a>
-                            </li>
-
-                            <!-- Admin Reports -->
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Reports" asp-action="AdminReports">
-                                    <i class="fas fa-chart-line"></i> Admin Reports
-                                </a>
-                            </li>
-                            
                             <!-- User Management -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-dark" href="#" id="userManagementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle text-danger" href="#" id="userManagementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-users-cog"></i> User Management
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="userManagementDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="UserManagement" asp-action="Index">
+                                            <i class="fas fa-search"></i> Search Users
+                                        </a>
+                                    </li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="User" asp-action="CreateUser">
                                             <i class="fas fa-user-plus"></i> Create User
@@ -93,6 +86,66 @@
                                     </li>
                                 </ul>
                             </li>
+
+                            <!-- Role & Access Management -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-warning" href="#" id="roleManagementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-key"></i> Role Management
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="roleManagementDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Role" asp-action="Index">
+                                            <i class="fas fa-clipboard-list"></i> Manage Roles
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Authorization Tests -->
+                            <li class="nav-item">
+                                <a class="nav-link text-warning" asp-controller="AuthorisationTest" asp-action="Index">
+                                    <i class="fas fa-vial"></i> Auth Tests
+                                </a>
+                            </li>
+
+                            <!-- Admin Reports -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-success" href="#" id="adminReportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-chart-line"></i> Admin Reports
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="adminReportsDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Reports" asp-action="AdminReports">
+                                            <i class="fas fa-chart-bar"></i> System Reports
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Reports" asp-action="UserActivity">
+                                            <i class="fas fa-user-clock"></i> User Activity
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Reports" asp-action="SecurityReports">
+                                            <i class="fas fa-shield-alt"></i> Security Reports
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Reports" asp-action="ComplianceReports">
+                                            <i class="fas fa-clipboard-check"></i> Compliance Reports
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+
+                        <!-- Manager-level features -->
+                        @if (User.Identity?.IsAuthenticated == true && (User.IsInRole("Admin") || User.IsInRole("Manager")))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-primary" asp-controller="Manager" asp-action="Index">
+                                    <i class="fas fa-sitemap"></i> Manager Dashboard
+                                </a>
+                            </li>
                         }
                     </ul>
                     
@@ -100,15 +153,34 @@
                     <ul class="navbar-nav ms-auto">
                         @if (User.Identity?.IsAuthenticated == true)
                         {
-                            <li class="nav-item">
-                                <span class="nav-link text-success">
-                                    <i class="fas fa-user-check"></i> Hello, @User.Identity.Name!
-                                </span>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" href="/logout">
-                                    <i class="fas fa-sign-out-alt"></i> Logout
+                            <!-- User info and quick actions -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-success" href="#" id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user-check"></i> @User.Identity.Name
                                 </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Profile" asp-action="Index">
+                                            <i class="fas fa-user"></i> My Profile
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="User" asp-action="EditUser" asp-route-id="@(ViewContext.HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)">
+                                            <i class="fas fa-cog"></i> Settings
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Security" asp-action="ChangePassword">
+                                            <i class="fas fa-lock"></i> Change Password
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="/logout">
+                                            <i class="fas fa-sign-out-alt"></i> Logout
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         }
                         else

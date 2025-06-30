@@ -57,8 +57,6 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, TenantAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, ClaimAuthorizationHandler>();
-builder.Services.AddScoped<IAuthorizationHandler, DepartmentAuthorizationHandler>();
-builder.Services.AddScoped<IAuthorizationHandler, BusinessHoursAuthorizationHandler>();
 
 // CONFIGURE AUTHORIZATION POLICIES for Task 2A
 builder.Services.AddAuthorization(options =>
@@ -76,29 +74,6 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("HR_Access", policy =>
         policy.AddRequirements(new RoleRequirement(new[] { "HR", "Human Resources", "HR Manager" })));
 
-    // DEPARTMENT-BASED POLICIES
-    options.AddPolicy("IT_Department", policy =>
-        policy.AddRequirements(new DepartmentRequirement("IT", "Information Technology", "Technical")));
-
-    options.AddPolicy("Finance_Department", policy =>
-        policy.AddRequirements(new DepartmentRequirement("Finance", "Accounting", "Financial")));
-
-    // BUSINESS HOURS POLICY
-    options.AddPolicy("BusinessHours", policy =>
-        policy.AddRequirements(new BusinessHoursRequirement(
-            new TimeSpan(9, 0, 0),  // 9:00 AM
-            new TimeSpan(17, 0, 0), // 5:00 PM
-            DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday)));
-
-    // COMBINED POLICIES
-    options.AddPolicy("AdminBusinessHours", policy =>
-    {
-        policy.AddRequirements(new RoleRequirement(new[] { "Admin", "Administrator" }));
-        policy.AddRequirements(new BusinessHoursRequirement(
-            new TimeSpan(8, 0, 0),
-            new TimeSpan(18, 0, 0),
-            DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday));
-    });
 
     // CLAIM-BASED POLICIES
     options.AddPolicy("VerifiedUsers", policy =>
@@ -114,7 +89,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("Admin")); // Uses ASP.NET Identity roles
 
     options.AddPolicy("LocalUserOnly", policy =>
-        policy.RequireRole("USER", "Admin")); // Uses ASP.NET Identity roles
+        policy.RequireRole("User", "Admin")); // Uses ASP.NET Identity roles
 });
 
 // Add MVC Controllers with Views
@@ -152,7 +127,7 @@ using (var scope = app.Services.CreateScope())
     }
 
     // Create roles - Enhanced for Task 2A
-    string[] roles = { "Admin", "USER", "Manager", "HR", "HR Manager" };
+    string[] roles = { "Admin", "User", "Manager", "HR", "HR Manager" };
     foreach (var role in roles)
     {
         if (!await roleManager.RoleExistsAsync(role))
@@ -215,9 +190,8 @@ else
     {
         var policies = new[]
         {
-            "AdminOnly", "ManagerOrAdmin", "HR_Access", "IT_Department", 
-            "Finance_Department", "BusinessHours", "AdminBusinessHours", 
-            "VerifiedUsers", "LocalAdminOnly", "LocalUserOnly"
+            "AdminOnly", "ManagerOrAdmin", "HR_Access", 
+            "LocalAdminOnly", "LocalUserOnly"
         };
         return Results.Json(policies);
     });
@@ -262,7 +236,7 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");  
 
 Console.WriteLine("=== Authorization Policies Configured ===");
-Console.WriteLine("Available policies: AdminOnly, ManagerOrAdmin, HR_Access, IT_Department, Finance_Department, BusinessHours, AdminBusinessHours, VerifiedUsers");
+Console.WriteLine("Available policies: AdminOnly, ManagerOrAdmin, HR_Access, VerifiedUsers");
 Console.WriteLine("Test URL: /AuthorizationTest");
 Console.WriteLine("Debug URLs: /debug/routes, /debug/policies");
 Console.WriteLine("=== End Authorization Debug ===");

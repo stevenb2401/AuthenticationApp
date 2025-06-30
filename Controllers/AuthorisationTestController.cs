@@ -24,9 +24,8 @@ namespace AuthenticationApp.Controllers
 
             var policies = new[]
             {
-                "AdminOnly", "ManagerOrAdmin", "HR_Access", "IT_Department", 
-                "Finance_Department", "BusinessHours", "AdminBusinessHours", 
-                "VerifiedUsers", "LocalAdminOnly", "LocalUserOnly"
+                "AdminOnly", "ManagerOrAdmin", "HR_Access",  
+                "LocalAdminOnly", "LocalUserOnly"
             };
 
             var policyResults = new Dictionary<string, bool>();

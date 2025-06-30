@@ -70,8 +70,8 @@
                                     <p class="small text-muted">Requires Admin, Administrator, or Global Administrator role</p>
                                     @if (policyResults?["AdminOnly"] == true)
                                     {
-                                        <a href="@Url.Action("AdminOnly", "AuthorisationTest")" class="btn btn-success btn-sm">
-                                            <i class="fas fa-unlock"></i> Access Admin Page
+                                        <a href="@Url.Action("Index", "Admin")" class="btn btn-success btn-sm">
+                                            <i class="fas fa-unlock"></i> Access Admin Dashboard
                                         </a>
                                     }
                                     else
@@ -91,8 +91,8 @@
                                     <p class="small text-muted">Requires Manager, Admin, or Administrator role</p>
                                     @if (policyResults?["ManagerOrAdmin"] == true)
                                     {
-                                        <a href="@Url.Action("ManagerOrAdmin", "AuthorisationTest")" class="btn btn-success btn-sm">
-                                            <i class="fas fa-unlock"></i> Access Manager Page
+                                        <a href="@Url.Action("Index", "Manager")" class="btn btn-success btn-sm">
+                                            <i class="fas fa-unlock"></i> Access Manager Dashboard
                                         </a>
                                     }
                                     else
@@ -104,151 +104,13 @@
                                 </div>
                             </div>
                         </div>
-
-                        <div class="col-md-4 mb-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6>Local Admin Only</h6>
-                                    <p class="small text-muted">Uses ASP.NET Identity Admin role</p>
-                                    @if (policyResults?["LocalAdminOnly"] == true)
-                                    {
-                                        <a href="@Url.Action("LocalAdminOnly", "AuthorisationTest")" class="btn btn-success btn-sm">
-                                            <i class="fas fa-unlock"></i> Access Local Admin
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-danger btn-sm" disabled>
-                                            <i class="fas fa-lock"></i> Access Denied
-                                        </button>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Department-Based Policies -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5><i class="fas fa-building"></i> Department-Based Authorisation Tests</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6>IT Department Access</h6>
-                                    <p class="small text-muted">Requires department: IT, Information Technology, or Technical</p>
-                                    @if (policyResults?["IT_Department"] == true)
-                                    {
-                                        <a href="@Url.Action("ITDepartment", "AuthorisationTest")" class="btn btn-success btn-sm">
-                                            <i class="fas fa-unlock"></i> Access IT Resources
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-danger btn-sm" disabled>
-                                            <i class="fas fa-lock"></i> Access Denied
-                                        </button>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6>Finance Department</h6>
-                                    <p class="small text-muted">Requires department: Finance, Accounting, or Financial</p>
-                                    @if (policyResults?["Finance_Department"] == true)
-                                    {
-                                        <button class="btn btn-success btn-sm">
-                                            <i class="fas fa-unlock"></i> Finance Authorised
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-danger btn-sm" disabled>
-                                            <i class="fas fa-lock"></i> Access Denied
-                                        </button>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Time-Based Policies -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header bg-secondary text-white">
-                    <h5><i class="fas fa-clock"></i> Time-Based Authorisation Tests</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6>Business Hours Access</h6>
-                                    <p class="small text-muted">Monday-Friday, 9:00 AM - 5:00 PM</p>
-                                    @if (policyResults?["BusinessHours"] == true)
-                                    {
-                                        <a href="@Url.Action("BusinessHours", "AuthorisationTest")" class="btn btn-success btn-sm">
-                                            <i class="fas fa-unlock"></i> Access During Business Hours
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-danger btn-sm" disabled>
-                                            <i class="fas fa-lock"></i> Outside Business Hours
-                                        </button>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6>Admin Business Hours</h6>
-                                    <p class="small text-muted">Admin role + Monday-Friday, 8:00 AM - 6:00 PM</p>
-                                    @if (policyResults?["AdminBusinessHours"] == true)
-                                    {
-                                        <a href="@Url.Action("AdminBusinessHours", "AuthorisationTest")" class="btn btn-success btn-sm">
-                                            <i class="fas fa-unlock"></i> Admin Business Access
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-danger btn-sm" disabled>
-                                            <i class="fas fa-lock"></i> Requirements Not Met
-                                        </button>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- User Information -->
     <div class="row">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-dark text-white">
-                    <h5><i class="fas fa-user-shield"></i> Current User Authorisation Context</h5>
+                    <h5><i class="fas fa-user-shield"></i> Logged In Users Information</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">

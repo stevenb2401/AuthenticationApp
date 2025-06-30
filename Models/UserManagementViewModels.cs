@@ -181,6 +181,8 @@ namespace AuthenticationApp.Models
 
         public List<UserSearchResultViewModel> Results { get; set; } = new List<UserSearchResultViewModel>();
         public List<string> AvailableRoles { get; set; } = new List<string>();
+
+        public List<string> AvailableDepartments { get; set; } = new List<string>();
         
         public int TotalResults { get; set; }
         public int CurrentPage { get; set; } = 1;
