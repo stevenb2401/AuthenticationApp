@@ -1,192 +1,103 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using AuthenticationApp.Models;
-using System.Security.Claims;
+using AuthenticationApp.Models; // or Authentication_App.Models
 
-namespace AuthenticationApp.Controllers
+namespace AuthenticationApp.Controllers // or Authentication_App.Controllers
 {
     [Authorize]
     public class ProfileController : Controller
     {
-        private readonly ILogger<ProfileController> _logger;
+        private readonly UserManager<IdentityUser> _userManager;
 
-        public ProfileController(ILogger<ProfileController> logger)
+        public ProfileController(UserManager<IdentityUser> userManager)
         {
-            _logger = logger;
+            _userManager = userManager;
         }
 
-/// <summary>
-/// Default profile page - provides overview and navigation to detailed views
-/// </summary>
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
+        {
+            return await Details();
+        }
+
+        public async Task<IActionResult> Details()
         {
             try
             {
-                // Get basic user info for the overview
-                var userInfo = new
+                // Get the current user from Identity database (same source as EditUser)
+                var currentUser = await _userManager.GetUserAsync(User);
+                if (currentUser == null)
                 {
-                    DisplayName = User.FindFirst("name")?.Value ?? User.Identity?.Name ?? "Unknown User",
-                    Email = GetClaimValue("preferred_username") ?? GetClaimValue("email") ?? "No email found",
+                    ViewBag.Error = "Unable to load user profile.";
+                    return View(new UserProfileViewModel());
+                }
+
+                // Get user roles from Identity database
+                var userRoles = await _userManager.GetRolesAsync(currentUser);
+
+                // Create the view model with Identity database values
+                var model = new UserProfileViewModel
+                {
+                    // IMPORTANT: These come from the Identity database (same as EditUser)
+                    DisplayName = currentUser.UserName ?? "No display name found",
+                    Email = currentUser.Email ?? "No email found", 
+                    PhoneNumber = currentUser.PhoneNumber, // This will now show the edited phone number
+                    
+                    // Authentication and security status
                     IsAuthenticated = User.Identity?.IsAuthenticated ?? false,
-                    UserId = GetClaimValue("oid") ?? "No ID found",
-                    RoleCount = ExtractRolesFromClaims().Count,
-                    ClaimsCount = User.Claims.Count()
+                    AuthenticationStatusDisplay = User.Identity?.IsAuthenticated == true ? "Authenticated" : "Not Authenticated",
+                    
+                    // Roles from Identity database
+                    Roles = userRoles.ToList(),
+                    HasAdminRole = userRoles.Contains("Admin"),
+                    
+                    // Identity fields (these reflect EditUser changes)
+                    ObjectId = currentUser.Id,
+                    EmailConfirmed = currentUser.EmailConfirmed,
+                    IsLockedOut = currentUser.LockoutEnd.HasValue && currentUser.LockoutEnd > DateTimeOffset.Now,
+                    LockoutEnd = currentUser.LockoutEnd,
+                    
+                    // Try to get additional info from claims (fallback)
+                    JobTitle = User.FindFirst("jobTitle")?.Value ?? 
+                              User.FindFirst("extension_JobTitle")?.Value ?? 
+                              "Not specified",
+                    
+                    Department = User.FindFirst("department")?.Value ?? 
+                                User.FindFirst("extension_Department")?.Value ?? 
+                                "Not specified",
+                    
+                    TenantId = User.FindFirst("tid")?.Value ?? 
+                              User.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid")?.Value ?? 
+                              "Not available"
                 };
 
-                _logger.LogInformation("User {UserId} accessed profile overview", userInfo.UserId);
-        
-                ViewBag.UserInfo = userInfo;
-                return View();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading profile overview");
-                ViewBag.Error = "Unable to load profile overview. Please try again.";
-                return View();
-            }
-        }
-
-        /// <summary>
-        /// Displays the user's profile information extracted from Azure AD claims
-        /// </summary>
-        public IActionResult Details()
-        {
-            try
-            {
-                // Extract user information from claims
-                var model = ExtractUserProfileFromClaims();
-
-                // Log the successful profile access
-                _logger.LogInformation("User {UserId} accessed their profile", model.ObjectId);
+                // Debug output to verify data is being loaded
+                Console.WriteLine($"Profile Debug - DisplayName: {model.DisplayName}");
+                Console.WriteLine($"Profile Debug - Email: {model.Email}");
+                Console.WriteLine($"Profile Debug - PhoneNumber: {model.PhoneNumber ?? "NULL"}");
+                Console.WriteLine($"Profile Debug - User ID: {model.ObjectId}");
 
                 return View(model);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading user profile");
-
-                // Return a model with error information
-                var errorModel = new UserProfileViewModel
-                {
-                    Name = "Error loading profile",
-                    IsAuthenticated = User.Identity?.IsAuthenticated ?? false
-                };
-
-                ViewBag.Error = "Unable to load profile information. Please try again.";
-                return View(errorModel);
+                ViewBag.Error = $"Error loading profile: {ex.Message}";
+                return View(new UserProfileViewModel());
             }
         }
 
-        /// <summary>
-        /// Extracts user profile information from Azure AD claims
-        /// </summary>
-        private UserProfileViewModel ExtractUserProfileFromClaims()
-        {
-            var model = new UserProfileViewModel();
-
-            // Basic identity information
-            model.Name = User.Identity?.Name ?? "Unknown User";
-            model.IsAuthenticated = User.Identity?.IsAuthenticated ?? false;
-
-            // Azure AD specific claims
-            model.Email = GetClaimValue("preferred_username") ?? 
-                         GetClaimValue("email") ?? 
-                         GetClaimValue("upn") ?? 
-                         "No email found";
-
-            model.DisplayName = GetClaimValue("name") ?? 
-                               GetClaimValue("given_name") + " " + GetClaimValue("family_name") ?? 
-                               model.Name;
-
-            model.ObjectId = GetClaimValue("oid") ?? GetClaimValue("sub") ?? "No ID found";
-            model.TenantId = GetClaimValue("tid") ?? "No tenant found";
-
-            // Extended profile information
-            model.JobTitle = GetClaimValue("jobTitle") ?? GetClaimValue("extension_JobTitle") ?? "";
-            model.Department = GetClaimValue("department") ?? GetClaimValue("extension_Department") ?? "";
-            model.PhoneNumber = GetClaimValue("phone_number") ?? GetClaimValue("mobile_phone") ?? "";
-            model.OfficeLocation = GetClaimValue("office_location") ?? "";
-            model.Manager = GetClaimValue("manager") ?? "";
-
-            // Extract roles from claims
-            model.Roles = ExtractRolesFromClaims();
-
-            // Log the claims extraction for debugging
-            _logger.LogDebug("Extracted profile for user {ObjectId}: {DisplayName}", 
-                model.ObjectId, model.DisplayName);
-
-            return model;
-        }
-
-        /// <summary>
-        /// Helper method to get claim value safely
-        /// </summary>
-        private string? GetClaimValue(string claimType)
-        {
-            return User.FindFirst(claimType)?.Value;
-        }
-
-        /// <summary>
-        /// Extracts user roles from various possible claim types
-        /// </summary>
-        private List<string> ExtractRolesFromClaims()
-        {
-            var roles = new List<string>();
-
-            // Check multiple possible role claim types
-            var roleClaims = User.FindAll("roles")?.Select(c => c.Value) ?? new List<string>();
-            roles.AddRange(roleClaims);
-
-            // Also check standard role claim type
-            var standardRoles = User.FindAll(ClaimTypes.Role)?.Select(c => c.Value) ?? new List<string>();
-            roles.AddRange(standardRoles);
-
-            // Check group claims
-            var groupClaims = User.FindAll("groups")?.Select(c => c.Value) ?? new List<string>();
-            roles.AddRange(groupClaims);
-
-            // Remove duplicates and return
-            return roles.Distinct().ToList();
-        }
-
-        /// <summary>
-        /// Returns detailed claims information for debugging
-        /// </summary>
+        [HttpGet]
         public IActionResult Claims()
         {
-            var claims = User.Claims.Select(c => new 
-            { 
-                Type = c.Type, 
-                Value = c.Value 
-            }).ToList();
-
-            ViewBag.Claims = claims;
-            return View();
+            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            return View(claims);
         }
 
-        /// <summary>
-        /// Action to display all available claims for debugging
-        /// </summary>
+        [HttpGet]
         public IActionResult DebugClaims()
         {
-            if (!User.Identity?.IsAuthenticated ?? true)
-            {
-                return Challenge();
-            }
-
-            var claimsInfo = User.Claims.Select(claim => new
-            {
-                Type = claim.Type,
-                Value = claim.Value,
-                ValueType = claim.ValueType,
-                Issuer = claim.Issuer
-            }).OrderBy(c => c.Type).ToList();
-
-            ViewBag.ClaimsCount = claimsInfo.Count;
-            ViewBag.UserId = GetClaimValue("oid");
-            ViewBag.UserEmail = GetClaimValue("preferred_username");
-
-            return View(claimsInfo);
+            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            return View(claims);
         }
     }
 }

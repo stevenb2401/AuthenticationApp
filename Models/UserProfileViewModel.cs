@@ -1,53 +1,35 @@
-using System.ComponentModel.DataAnnotations;
-
-namespace AuthenticationApp.Models
+namespace AuthenticationApp.Models // or Authentication_App.Models
 {
     public class UserProfileViewModel
     {
-        [Display(Name = "Display Name")]
-        public string DisplayName { get; set; } = string.Empty;
-
-        [Display(Name = "Email Address")]
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
-
-        [Display(Name = "Username")]
-        public string Name { get; set; } = string.Empty;
-
-        [Display(Name = "Job Title")]
-        public string JobTitle { get; set; } = string.Empty;
-
-        [Display(Name = "Department")]
-        public string Department { get; set; } = string.Empty;
-
-        [Display(Name = "User Roles")]
-        public List<string> Roles { get; set; } = new List<string>();
-
-        [Display(Name = "Authentication Status")]
+        // Basic Information (from Identity database - matches EditUser)
+        public string DisplayName { get; set; } = "No display name found";
+        public string Email { get; set; } = "No email found";
+        public string? PhoneNumber { get; set; } // This property is essential
+        
+        // Authentication Status
         public bool IsAuthenticated { get; set; }
-
-        [Display(Name = "User ID")]
-        public string ObjectId { get; set; } = string.Empty;
-
-        [Display(Name = "Tenant ID")]
-        public string TenantId { get; set; } = string.Empty;
-
-        [Display(Name = "Phone Number")]
-        public string PhoneNumber { get; set; } = string.Empty;
-
-        [Display(Name = "Office Location")]
-        public string OfficeLocation { get; set; } = string.Empty;
-
-        [Display(Name = "Manager")]
-        public string Manager { get; set; } = string.Empty;
-
-        // Helper properties for UI display
-        public string RolesDisplay => Roles.Any() ? string.Join(", ", Roles) : "No roles assigned";
+        public string AuthenticationStatusDisplay { get; set; } = "Not Authenticated";
         
-        public string AuthenticationStatusDisplay => IsAuthenticated ? "Authenticated" : "Not Authenticated";
+        // Organization Information (from claims - fallback)
+        public string JobTitle { get; set; } = "Not specified";
+        public string Department { get; set; } = "Not specified";
         
-        public bool HasAdminRole => Roles.Contains("Admin", StringComparer.OrdinalIgnoreCase);
+        // Roles (from Identity database)
+        public List<string> Roles { get; set; } = new List<string>();
+        public bool HasAdminRole { get; set; }
         
-        public bool HasManagerRole => Roles.Contains("Manager", StringComparer.OrdinalIgnoreCase);
+        // Technical Information
+        public string ObjectId { get; set; } = "No ID found";
+        public string TenantId { get; set; } = "Not available";
+        
+        // Security Information (from Identity database - matches EditUser)
+        public bool EmailConfirmed { get; set; }
+        public bool IsLockedOut { get; set; }
+        public DateTimeOffset? LockoutEnd { get; set; }
+        
+        // Additional Properties
+        public DateTime? LastLoginDate { get; set; }
+        public DateTime? CreatedDate { get; set; }
     }
 }

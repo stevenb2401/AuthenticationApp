@@ -1,39 +1,195 @@
 ﻿@model Authentication_App.Models.EditUserViewModel
-
-<h1>Edit User</h1>
-
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success">
-        @TempData["SuccessMessage"]
-    </div>
-}
-@if (TempData["ErrorMessage"] != null)
-{
-    <div class="alert alert-danger">
-        @TempData["ErrorMessage"]
-    </div>
+@{
+    ViewData["Title"] = "Edit User";
 }
 
-<form method="post" asp-action="EditUser">
-    <!-- Email Field -->
-    <div class="mb-3">
-        <label asp-for="Email" class="form-label">Email</label>
-        <input asp-for="Email" type="email" class="form-control" readonly />
-        <span asp-validation-for="Email" class="text-danger"></span>
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="UserList">Users</a></li>
+                    <li class="breadcrumb-item active">Edit User</li>
+                </ol>
+            </nav>
+            
+            <h2><i class="fas fa-user-edit"></i> Edit User Profile</h2>
+            <p class="text-muted">Modify user account settings and profile information.</p>
+        </div>
     </div>
 
-    <!-- Role Field -->
-    <div class="mb-3">
-        <label asp-for="Role" class="form-label">Role</label>
-        <select asp-for="Role" class="form-select">
-            <option value="User">User</option>
-            <option value="Admin">Admin</option>
-        </select>
-        <span asp-validation-for="Role" class="text-danger"></span>
-    </div>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
-    <!-- Submit Button -->
-    <button type="submit" class="btn btn-primary">Save Changes</button>
-    <a asp-action="UserList" class="btn btn-secondary">Cancel</a>
-</form>
+    <form asp-action="EditUser" method="post">
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="IsCurrentUser" type="hidden" />
+        <input asp-for="SecurityStamp" type="hidden" />
+        
+        <div class="row">
+            <!-- Basic Information -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5><i class="fas fa-user"></i> Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="UserName" class="form-label"></label>
+                                <input asp-for="UserName" class="form-control" />
+                                <span asp-validation-for="UserName" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Email" class="form-label"></label>
+                                <input asp-for="Email" class="form-control" type="email" />
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="PhoneNumber" class="form-label"></label>
+                                <input asp-for="PhoneNumber" class="form-control" type="tel" placeholder="Optional" />
+                                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Role" class="form-label">Role</label>
+                                <input asp-for="Role" class="form-control" placeholder="Enter role (Admin, User, Manager, HR, HR Manager)" />
+                                <span asp-validation-for="Role" class="text-danger"></span>
+                                <div class="form-text">Available roles: Admin, User, Manager, HR, HR Manager</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Security -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="fas fa-shield-alt"></i> Account Security</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input asp-for="EmailConfirmed" class="form-check-input" type="checkbox" />
+                                    <label asp-for="EmailConfirmed" class="form-check-label"></label>
+                                </div>
+                                
+                                <div class="form-check">
+                                    <input asp-for="IsLockedOut" class="form-check-input" type="checkbox" />
+                                    <label asp-for="IsLockedOut" class="form-check-label"></label>
+                                </div>
+                                
+                                @if (Model.LockoutEnd.HasValue && Model.LockoutEnd > DateTimeOffset.Now)
+                                {
+                                    <small class="text-muted d-block mt-1">
+                                        Locked until: @Model.LockoutEnd.Value.ToString("yyyy-MM-dd HH:mm")
+                                    </small>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                @if (Model.IsCurrentUser)
+                                {
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i> This is your own account
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Info & Roles -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5><i class="fas fa-key"></i> User Roles</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.CurrentRoles.Any())
+                        {
+                            <h6>Current Roles:</h6>
+                            @foreach (var role in Model.CurrentRoles)
+                            {
+                                <span class="badge bg-primary me-1 mb-1">@role</span>
+                            }
+                            <hr />
+                            <small class="text-muted">Role can be changed in the Basic Information section.</small>
+                        }
+                        else
+                        {
+                            <p class="text-muted">No roles assigned</p>
+                        }
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5><i class="fas fa-info-circle"></i> Profile Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>User ID:</strong><br><code class="small">@Model.Id</code></p>
+                        
+                        <hr />
+                        <div class="mb-2">
+                            <strong>Display Name:</strong><br>
+                            <span class="text-primary">@Model.UserName</span>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <strong>Email:</strong><br>
+                            <span class="text-info">@Model.Email</span>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <strong>Authentication:</strong><br>
+                            <span class="badge bg-success">Authenticated</span>
+                        </div>
+                        
+                        @if (Model.CreatedDate.HasValue)
+                        {
+                            <div class="mb-2">
+                                <strong>Created:</strong><br>
+                                <small class="text-muted">@Model.CreatedDate.Value.ToString("yyyy-MM-dd")</small>
+                            </div>
+                        }
+                        
+                        @if (Model.LastLoginDate.HasValue)
+                        {
+                            <div class="mb-2">
+                                <strong>Last Login:</strong><br>
+                                <small class="text-muted">@Model.LastLoginDate.Value.ToString("yyyy-MM-dd HH:mm")</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a asp-action="UserList" class="btn btn-secondary me-md-2">
+                        <i class="fas fa-arrow-left"></i> Back to Users
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

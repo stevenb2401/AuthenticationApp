@@ -1,0 +1,191 @@
+@model AuthenticationApp.Models.EditUserViewModel
+@{
+    ViewData["Title"] = "User Details";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="Index">User Management</a></li>
+                    <li class="breadcrumb-item active">User Details</li>
+                </ol>
+            </nav>
+            
+            <h2><i class="fas fa-user"></i> User Details</h2>
+            <p class="text-muted">View and manage user account information.</p>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- User Information -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="fas fa-user-circle"></i> User Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Username:</strong></td>
+                                    <td>@Model.UserName</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td>
+                                        @Model.Email
+                                        @if (Model.EmailConfirmed)
+                                        {
+                                            <i class="fas fa-check-circle text-success ms-1" title="Email Confirmed"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-exclamation-circle text-warning ms-1" title="Email Not Confirmed"></i>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Phone:</strong></td>
+                                    <td>@(!string.IsNullOrEmpty(Model.PhoneNumber) ? Model.PhoneNumber : "Not provided")</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td>
+                                        @if (Model.IsEnabled)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Disabled</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>User ID:</strong></td>
+                                    <td><code class="small">@Model.Id</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Access Failed:</strong></td>
+                                    <td>@Model.AccessFailedCount attempts</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="fas fa-cogs"></i> Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                            <i class="fas fa-edit"></i> Edit User
+                        </a>
+                        <a asp-action="ResetPassword" asp-route-id="@Model.Id" class="btn btn-warning">
+                            <i class="fas fa-key"></i> Reset Password
+                        </a>
+                        <form asp-action="ToggleLock" asp-route-id="@Model.Id" method="post" style="display: inline;">
+                            @if (Model.LockoutEnd.HasValue && Model.LockoutEnd > DateTimeOffset.Now)
+                            {
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-unlock"></i> Unlock User
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="submit" class="btn btn-secondary w-100">
+                                    <i class="fas fa-lock"></i> Lock User
+                                </button>
+                            }
+                        </form>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="fas fa-trash"></i> Delete User
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Roles Card -->
+            <div class="card mt-3">
+                <div class="card-header bg-secondary text-white">
+                    <h5><i class="fas fa-key"></i> User Roles</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.CurrentRoles.Any())
+                    {
+                        @foreach (var role in Model.CurrentRoles)
+                        {
+                            <span class="badge bg-primary me-1 mb-1">@role</span>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">No roles assigned</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to User Management
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete user <strong>@Model.UserName</strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete User
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
