@@ -47,16 +47,16 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/AccessDenied";
 });
 
-// REGISTER ONLY USED AUTHORIZATION HANDLERS
+// REGISTER ONLY USED AUTHORIsATION HANDLERS
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 
-// CONFIGURE AUTHORIZATION POLICIES (cleaned up)
+// CONFIGURE AUTHORIZATION POLICIES
 builder.Services.AddAuthorization(options =>
 {
     // Default policy requires authentication
     options.FallbackPolicy = options.DefaultPolicy;
 
-    // ROLE-BASED POLICIES (keep only what's used)
+    // ROLE-BASED POLICIES 
     options.AddPolicy("Admin", policy =>
         policy.AddRequirements(new RoleRequirement(new[] { "Admin", "Administrator", "Global Administrator" })));
 
@@ -68,10 +68,10 @@ builder.Services.AddAuthorization(options =>
 
     // LOCAL IDENTITY POLICIES
     options.AddPolicy("Local_Admin", policy =>
-        policy.RequireRole("Admin")); // Uses ASP.NET Identity roles
+        policy.RequireRole("Admin")); 
 
     options.AddPolicy("Local_User", policy =>
-        policy.RequireRole("User", "Admin")); // Uses ASP.NET Identity roles
+        policy.RequireRole("User", "Admin")); 
 });
 
 // Add MVC Controllers with Views
