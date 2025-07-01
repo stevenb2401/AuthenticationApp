@@ -24,7 +24,7 @@ namespace Authentication_App.Models
         [Display(Name = "Role")]
         public string Role { get; set; } = string.Empty;
 
-        // ADD THESE FIELDS - These are the ones that appear in your profile
+        // Profile information
         [Required(ErrorMessage = "Display Name is required.")]
         [Display(Name = "Display Name")]
         [StringLength(100, ErrorMessage = "Display name cannot exceed 100 characters")]

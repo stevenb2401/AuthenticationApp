@@ -4,9 +4,7 @@ using System.Security.Claims;
 
 namespace AuthenticationApp.Services
 {
-    /// <summary>
     /// Handler for role-based authorization
-    /// </summary>
     public class RoleAuthorizationHandler : AuthorizationHandler<RoleRequirement>
     {
         private readonly ILogger<RoleAuthorizationHandler> _logger;

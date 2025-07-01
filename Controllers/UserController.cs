@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Authentication_App.Controllers
 {
-    [Authorize] // Change from "Admin" only to allow all authenticated users
+    [Authorize]
     public class UserController : Controller
     {
         private readonly UserManager<IdentityUser> _userManager;
@@ -18,7 +18,7 @@ namespace Authentication_App.Controllers
             _roleManager = roleManager;
         }
 
-        // GET method for rendering the Create User form - ADMIN ONLY
+        // GET method for rendering the Create User form
         [HttpGet]
         [Authorize(Roles = "Admin")] // Only admins can create users
         public IActionResult CreateUser()
@@ -26,22 +26,22 @@ namespace Authentication_App.Controllers
             return View(new CreateUserViewModel());
         }
 
-        // POST method for handling Create User form submission - ADMIN ONLY
+        // POST method for handling Create User form submission
         [HttpPost]
         [Authorize(Roles = "Admin")] // Only admins can create users
         public async Task<IActionResult> CreateUser(CreateUserViewModel model)
         {
             if (!ModelState.IsValid)
             {
-                return View(model); // Return the form with validation errors
+                return View(model); // Returns the form if there are any validation errors
             }
 
             var user = new IdentityUser
             {
-                UserName = model.DisplayName, // Use DisplayName instead of Email
+                UserName = model.DisplayName, 
                 Email = model.Email,
                 EmailConfirmed = true,
-                PhoneNumber = model.PhoneNumber // Include phone number
+                PhoneNumber = model.PhoneNumber 
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -61,10 +61,10 @@ namespace Authentication_App.Controllers
                 ModelState.AddModelError(string.Empty, error.Description);
             }
 
-            return View(model); // Redisplay the form with errors
+            return View(model);
         }
 
-        // GET method for displaying the User List - ADMIN ONLY
+        // GET method for displaying the User List
         [Authorize(Roles = "Admin")] // Only admins can view user list
         public IActionResult UserList()
         {
@@ -72,7 +72,7 @@ namespace Authentication_App.Controllers
             return View(users); // Pass the list of users to the UserList view
         }
 
-        // GET method for rendering the Edit User form - ALLOW SELF-EDIT
+        // GET method for rendering the Edit User form
         [HttpGet]
         public async Task<IActionResult> EditUser(string id)
         {
@@ -84,7 +84,7 @@ namespace Authentication_App.Controllers
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
             {
-                return NotFound(); // Return 404 if the user doesn't exist
+                return NotFound(); 
             }
 
             var currentUser = await _userManager.GetUserAsync(User);
@@ -97,7 +97,7 @@ namespace Authentication_App.Controllers
 
             var userRoles = await _userManager.GetRolesAsync(user);
 
-            // Get the primary role (first role or default to empty string)
+            // Get the user's primary role
             var primaryRole = userRoles.FirstOrDefault() ?? string.Empty;
 
             var model = new EditUserViewModel
@@ -111,7 +111,7 @@ namespace Authentication_App.Controllers
                 IsLockedOut = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.Now,
                 LockoutEnd = user.LockoutEnd,
                 CurrentRoles = userRoles.ToList(),
-                AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" }, // Simple list
+                AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" },
                 IsCurrentUser = currentUser?.Id == user.Id,
                 SecurityStamp = user.SecurityStamp
             };
@@ -119,7 +119,7 @@ namespace Authentication_App.Controllers
             return View(model);
         }
 
-        // POST method for handling Edit User form submission - ALLOW SELF-EDIT
+        // POST method for handling Edit User form submission
         [HttpPost]
         public async Task<IActionResult> EditUser(EditUserViewModel model)
         {
@@ -148,7 +148,6 @@ namespace Authentication_App.Controllers
             user.UserName = model.UserName;
             user.PhoneNumber = model.PhoneNumber;
             
-            // Handle email change
             bool emailChanged = user.Email != model.Email;
             if (emailChanged)
             {
@@ -160,7 +159,7 @@ namespace Authentication_App.Controllers
                 user.EmailConfirmed = model.EmailConfirmed;
             }
 
-            // Handle lockout - ONLY ADMINS CAN CHANGE THIS
+            // Handle lockout
             if (User.IsInRole("Admin"))
             {
                 if (model.IsLockedOut && (!user.LockoutEnd.HasValue || user.LockoutEnd <= DateTimeOffset.Now))
@@ -173,12 +172,11 @@ namespace Authentication_App.Controllers
                 }
             }
 
-            // IMPORTANT: Update the user FIRST
             var result = await _userManager.UpdateAsync(user);
             
             if (result.Succeeded)
             {
-                // Handle role changes - ONLY ADMINS CAN CHANGE ROLES
+                // Handle role changes
                 if (User.IsInRole("Admin") && !string.IsNullOrEmpty(model.Role))
                 {
                     var currentRoles = await _userManager.GetRolesAsync(user);
@@ -224,9 +222,9 @@ namespace Authentication_App.Controllers
             return View(model);
         }
 
-        // POST method for handling user deletion - ADMIN ONLY
+        // POST method for handling user deletion 
         [HttpPost]
-        [Authorize(Roles = "Admin")] // Only admins can delete users
+        [Authorize(Roles = "Admin")] // Only admins can delete users 
         public async Task<IActionResult> DeleteUser(string id)
         {
             var user = await _userManager.FindByIdAsync(id);

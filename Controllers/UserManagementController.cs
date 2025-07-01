@@ -23,10 +23,8 @@ namespace AuthenticationApp.Controllers
             _roleManager = roleManager;
             _logger = logger;
         }
-
-        /// <summary>
+        
         /// User management dashboard with search and filtering
-        /// </summary>
         public async Task<IActionResult> Index(UserSearchViewModel model)
         {
             try
@@ -40,7 +38,7 @@ namespace AuthenticationApp.Controllers
                 // Apply search filters
                 if (!string.IsNullOrEmpty(model.SearchTerm))
                 {
-                    query = query.Where(u => 
+                    query = query.Where(u =>
                         u.UserName.Contains(model.SearchTerm) ||
                         u.Email.Contains(model.SearchTerm) ||
                         u.PhoneNumber.Contains(model.SearchTerm));
@@ -120,9 +118,7 @@ namespace AuthenticationApp.Controllers
             }
         }
 
-        /// <summary>
         /// Show create user form
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> Create()
         {
@@ -134,9 +130,7 @@ namespace AuthenticationApp.Controllers
             return View(model);
         }
 
-        /// <summary>
         /// Create a new user
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Authentication_App.Models.CreateUserViewModel model)
@@ -204,9 +198,7 @@ namespace AuthenticationApp.Controllers
             return View(model);
         }
 
-        /// <summary>
-        /// Show user details
-        /// </summary>
+        ///Show user details
         [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
@@ -249,9 +241,7 @@ namespace AuthenticationApp.Controllers
             }
         }
 
-        /// <summary>
         /// Show edit user form
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> Edit(string id)
         {
@@ -294,9 +284,7 @@ namespace AuthenticationApp.Controllers
             }
         }
 
-        /// <summary>
         /// Update user information
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(Authentication_App.Models.EditUserViewModel model)
@@ -365,9 +353,7 @@ namespace AuthenticationApp.Controllers
             return View(model);
         }
 
-        /// <summary>
         /// Show password reset form
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> ResetPassword(string id)
         {
@@ -392,9 +378,7 @@ namespace AuthenticationApp.Controllers
             return View(model);
         }
 
-        /// <summary>
         /// Reset user password
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
@@ -441,9 +425,7 @@ namespace AuthenticationApp.Controllers
             return View(model);
         }
 
-        /// <summary>
         /// Toggle user lock status
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleLock(string id)
@@ -483,9 +465,7 @@ namespace AuthenticationApp.Controllers
             }
         }
 
-        /// <summary>
-        /// Delete user (with confirmation)
-        /// </summary>
+        /// Deletes user and confirms the process
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(string id)
@@ -523,9 +503,7 @@ namespace AuthenticationApp.Controllers
 
         #region Helper Methods
 
-        /// <summary>
-        /// Get available roles for selection (simplified version)
-        /// </summary>
+        /// Get available roles for selection 
         private async Task<List<RoleSelectionViewModel>> GetAvailableRolesAsync()
         {
             var roles = await _roleManager.Roles.ToListAsync();

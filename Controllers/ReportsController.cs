@@ -6,26 +6,26 @@ namespace Authentication_App.Controllers
 {
     public class ReportsController : Controller
     {
-        // Publicly accessible action for all users
+        // Report page accessible to all users
         public IActionResult Index()
         {
-            ViewData["Title"] = "Reports"; // Set the title for the view
-            return View(); // Returns the default view for general reports
+            ViewData["Title"] = "Reports";
+            return View();
         }
 
-        // Restricted action for Admins only
+        // Restricted page for Admins only
         [Authorize(Roles = "Admin")]
         public IActionResult AdminReports()
         {
-            ViewData["Title"] = "Admin Reports"; // Set the title for the Admin view
+            ViewData["Title"] = "Admin Reports";
 
-            // Ensure the user is truly an Admin (double-check)
+            // Ensures the user is an Admin
             if (!User.IsInRole("Admin"))
             {
                 return RedirectToAction("AccessDenied", "Account");
             }
 
-            return View(); // Returns the Admin reports view
+            return View();
         }
     }
 }

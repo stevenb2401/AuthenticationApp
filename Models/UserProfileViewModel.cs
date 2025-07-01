@@ -1,17 +1,17 @@
-namespace AuthenticationApp.Models // or Authentication_App.Models
+namespace AuthenticationApp.Models
 {
     public class UserProfileViewModel
     {
-        // Basic Information (from Identity database - matches EditUser)
+        // Basic Information 
         public string DisplayName { get; set; } = "No display name found";
         public string Email { get; set; } = "No email found";
-        public string? PhoneNumber { get; set; } // This property is essential
+        public string? PhoneNumber { get; set; } 
         
         // Authentication Status
         public bool IsAuthenticated { get; set; }
         public string AuthenticationStatusDisplay { get; set; } = "Not Authenticated";
         
-        // Roles (from Identity database)
+        // Roles and Permissions
         public List<string> Roles { get; set; } = new List<string>();
         public bool HasAdminRole { get; set; }
         
@@ -19,7 +19,7 @@ namespace AuthenticationApp.Models // or Authentication_App.Models
         public string ObjectId { get; set; } = "No ID found";
         public string TenantId { get; set; } = "Not available";
         
-        // Security Information (from Identity database - matches EditUser)
+        // Security Information 
         public bool EmailConfirmed { get; set; }
         public bool IsLockedOut { get; set; }
         public DateTimeOffset? LockoutEnd { get; set; }

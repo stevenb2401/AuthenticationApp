@@ -24,7 +24,7 @@ namespace AuthenticationApp.Controllers // or Authentication_App.Controllers
         {
             try
             {
-                // Get the current user from Identity database (same source as EditUser)
+                // Get the current user from Identity database
                 var currentUser = await _userManager.GetUserAsync(User);
                 if (currentUser == null)
                 {
@@ -35,29 +35,28 @@ namespace AuthenticationApp.Controllers // or Authentication_App.Controllers
                 // Get user roles from Identity database
                 var userRoles = await _userManager.GetRolesAsync(currentUser);
 
-                // Create the view model with Identity database values (SAME AS EDITUSER)
+                // Create the view model with Identity database values
                 var model = new UserProfileViewModel
                 {
-                    // IMPORTANT: These come from the Identity database (same as EditUser)
                     DisplayName = currentUser.UserName ?? "No display name found",
                     Email = currentUser.Email ?? "No email found", 
-                    PhoneNumber = currentUser.PhoneNumber, // This will now show the edited phone number
+                    PhoneNumber = currentUser.PhoneNumber, 
                     
-                    // Authentication and security status (from Identity database)
+                    // Authentication and security status
                     IsAuthenticated = User.Identity?.IsAuthenticated ?? false,
                     AuthenticationStatusDisplay = User.Identity?.IsAuthenticated == true ? "Authenticated" : "Not Authenticated",
                     
-                    // Roles from Identity database (same as EditUser)
+                    // Roles from Identity database
                     Roles = userRoles.ToList(),
                     HasAdminRole = userRoles.Contains("Admin"),
                     
-                    // Identity fields (these reflect EditUser changes)
+                    // Identity fields
                     ObjectId = currentUser.Id,
                     EmailConfirmed = currentUser.EmailConfirmed,
                     IsLockedOut = currentUser.LockoutEnd.HasValue && currentUser.LockoutEnd > DateTimeOffset.Now,
                     LockoutEnd = currentUser.LockoutEnd,
                     
-                    // Try to get additional info from claims (fallback)            
+                    // Try to get additional info from claims           
                     TenantId = User.FindFirst("tid")?.Value ?? 
                               User.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid")?.Value ?? 
                               "Not available"

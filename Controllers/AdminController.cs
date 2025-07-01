@@ -23,9 +23,7 @@ namespace AuthenticationApp.Controllers
             _roleManager = roleManager;
         }
 
-        /// <summary>
-        /// Admin dashboard showing system overview and management options
-        /// </summary>
+        /// Admin Dashboard showing user information
         public async Task<IActionResult> Index()
         {
             _logger.LogInformation("Admin dashboard accessed by user: {User}", User.Identity?.Name);
@@ -59,7 +57,7 @@ namespace AuthenticationApp.Controllers
                         .ToListAsync()
                 };
 
-                // Get current admin's roles for display
+                // Display current user's roles
                 var currentUser = await _userManager.GetUserAsync(User);
                 if (currentUser != null)
                 {
@@ -83,9 +81,7 @@ namespace AuthenticationApp.Controllers
             }
         }
 
-        /// <summary>
-        /// Simple test action to verify controller is working
-        /// </summary>
+        /// Test action which verifies admin access
         public IActionResult Test()
         {
             ViewBag.Message = "Admin controller test successful!";

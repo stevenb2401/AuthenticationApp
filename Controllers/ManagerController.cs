@@ -45,7 +45,7 @@ namespace AuthenticationApp.Controllers
                     .ToListAsync()
             };
 
-            // Get role distribution
+            // Role distribution across users
             var roles = await _roleManager.Roles.ToListAsync();
             foreach (var role in roles)
             {

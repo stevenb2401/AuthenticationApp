@@ -18,11 +18,10 @@ namespace Authentication_App.Controllers
             _logger = logger;
         }
 
-        // Updated Index action with ViewData["Title"] initialization
         public IActionResult Index()
         {
-            ViewData["Title"] = "Home Page"; // Set the page title for layout
-            return View(); // Return the Index.cshtml view
+            ViewData["Title"] = "Home Page";
+            return View();
         }
 
         [Authorize]
@@ -35,7 +34,7 @@ namespace Authentication_App.Controllers
             ViewData["UserName"] = userName;
             ViewData["Email"] = email;
 
-            return View(); // Return the Privacy.cshtml view
+            return View();
         }
 
         // Logout action to sign out the user

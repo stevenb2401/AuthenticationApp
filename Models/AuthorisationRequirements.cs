@@ -2,9 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace AuthenticationApp.Models
 {
-    /// <summary>
     /// Requirement for users with specific roles
-    /// </summary>
     public class RoleRequirement : IAuthorizationRequirement
     {
         public string[] RequiredRoles { get; }

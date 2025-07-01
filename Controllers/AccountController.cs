@@ -14,7 +14,7 @@ namespace Authentication_App.Controllers
             _signInManager = signInManager;
         }
 
-        // GET: Login
+        // GET login page
         [HttpGet]
         [AllowAnonymous]
         [Route("signin")]
@@ -26,7 +26,7 @@ namespace Authentication_App.Controllers
             return View(new LoginViewModel());
         }
 
-        // POST: Login
+        // POST login page
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -63,7 +63,7 @@ namespace Authentication_App.Controllers
             return View(model);
         }
 
-        // GET: AccessDenied
+        // GET access denied page
         [HttpGet]
         public IActionResult AccessDenied()
         {

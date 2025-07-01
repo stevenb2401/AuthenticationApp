@@ -15,14 +15,12 @@ namespace AuthenticationApp.Controllers
             _authorizationService = authorizationService;
         }
 
-        /// <summary>
-        /// Shows authorisation test dashboard
-        /// </summary>
+        /// Authorisation test dashboard
         public async Task<IActionResult> Index()
         {
             _logger.LogInformation("Authorisation test dashboard accessed by user: {User}", User.Identity?.Name);
 
-            // Fixed policy names to match your actual Program.cs configuration
+            // Only test policies that actually exist in Program.cs
             var policies = new[]
             {
                 "Admin", "Manager_or_Admin", "HR_Access",  
@@ -37,6 +35,8 @@ namespace AuthenticationApp.Controllers
                 {
                     var result = await _authorizationService.AuthorizeAsync(User, policy);
                     policyResults[policy] = result.Succeeded;
+                    
+                    _logger.LogDebug("Policy {Policy}: {Result}", policy, result.Succeeded ? "AUTHORISED" : "DENIED");
                 }
                 catch (Exception ex)
                 {
@@ -66,29 +66,6 @@ namespace AuthenticationApp.Controllers
             return View();
         }
 
-        [Authorize(Policy = "BusinessHours")]
-        public IActionResult BusinessHours()
-        {
-            _logger.LogInformation("Business hours page accessed by user: {User} at {Time}", 
-                User.Identity?.Name, DateTime.Now);
-            return View();
-        }
-
-        [Authorize(Policy = "IT_Department")]
-        public IActionResult ITDepartment()
-        {
-            _logger.LogInformation("IT Department page accessed by user: {User}", User.Identity?.Name);
-            return View();
-        }
-
-        [Authorize(Policy = "AdminBusinessHours")]
-        public IActionResult AdminBusinessHours()
-        {
-            _logger.LogInformation("Admin Business Hours page accessed by user: {User} at {Time}", 
-                User.Identity?.Name, DateTime.Now);
-            return View();
-        }
-
         [Authorize(Policy = "Local_Admin")]
         public IActionResult LocalAdminOnly()
         {
@@ -96,9 +73,7 @@ namespace AuthenticationApp.Controllers
             return View();
         }
 
-        /// <summary>
         /// Test page that shows policy evaluation results
-        /// </summary>
         public async Task<IActionResult> PolicyTest(string policyName)
         {
             if (string.IsNullOrEmpty(policyName))
@@ -126,9 +101,32 @@ namespace AuthenticationApp.Controllers
             }
         }
 
-        /// <summary>
+        /// Shows detailed user claims for debugging
+        public IActionResult UserInfo()
+        {
+            var userInfo = new
+            {
+                Name = User.Identity?.Name,
+                IsAuthenticated = User.Identity?.IsAuthenticated,
+                AuthenticationType = User.Identity?.AuthenticationType,
+                Claims = User.Claims.Select(c => new { c.Type, c.Value, c.Issuer }).ToList(),
+                Roles = User.FindAll("roles")
+                    .Union(User.FindAll(System.Security.Claims.ClaimTypes.Role))
+                    .Union(User.FindAll("groups"))
+                    .Select(c => c.Value)
+                    .Distinct()
+                    .ToList(),
+                Department = User.FindFirst("department")?.Value ?? 
+                           User.FindFirst("extension_Department")?.Value ?? "Not specified",
+                TenantId = User.FindFirst("tid")?.Value ?? "Not found",
+                ObjectId = User.FindFirst("oid")?.Value ?? "Not found"
+            };
+
+            ViewBag.UserInfo = userInfo;
+            return View();
+        }
+
         /// Helper method to check if current time is within business hours
-        /// </summary>
         private bool IsCurrentlyBusinessHours()
         {
             var now = DateTime.Now;
@@ -139,14 +137,12 @@ namespace AuthenticationApp.Controllers
             var startTime = new TimeSpan(9, 0, 0); // 9:00 AM
             var endTime = new TimeSpan(17, 0, 0);  // 5:00 PM
 
-            return businessDays.Contains(currentDay) && 
-                   currentTime >= startTime && 
+            return businessDays.Contains(currentDay) &&
+                   currentTime >= startTime &&
                    currentTime <= endTime;
         }
 
-        /// <summary>
         /// API endpoint to check authorisation for a specific policy
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> CheckPolicy(string policy)
         {
