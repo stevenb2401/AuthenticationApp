@@ -10,12 +10,7 @@ using AuthenticationApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DEBUG: Check configuration loading
-Console.WriteLine("=== Configuration Debug ===");
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-Console.WriteLine($"Connection string found: {!string.IsNullOrEmpty(connectionString)}");
-Console.WriteLine($"Connection string: {connectionString}");
-Console.WriteLine("=== End Debug ===");
 
 // Register DbContext with connection string
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -53,18 +48,18 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/AccessDenied";
 });
 
-// REGISTER AUTHORIZATION HANDLERS for Task 2A
+// Register authorization handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, TenantAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, ClaimAuthorizationHandler>();
 
-// CONFIGURE AUTHORIZATION POLICIES for Task 2A
+// Configure authorization policies
 builder.Services.AddAuthorization(options =>
 {
     // Default policy requires authentication
     options.FallbackPolicy = options.DefaultPolicy;
 
-    // ROLE-BASED POLICIES
+    // Role-based policies
     options.AddPolicy("Admin", policy =>
         policy.AddRequirements(new RoleRequirement(new[] { "Admin", "Administrator", "Global Administrator" })));
 
@@ -74,34 +69,34 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("HR_Access", policy =>
         policy.AddRequirements(new RoleRequirement(new[] { "HR", "Human Resources", "HR Manager" })));
 
-    // CLAIM-BASED POLICIES
+    // Claim-based policies
     options.AddPolicy("VerifiedUsers", policy =>
         policy.AddRequirements(new ClaimRequirement("email_verified", "true")));
 
-    // TENANT-SPECIFIC POLICY
+    // Tenant-specific policy
     var tenantId = builder.Configuration["AzureAd:TenantId"] ?? "your-tenant-id-here";
     options.AddPolicy("SpecificTenant", policy =>
         policy.AddRequirements(new TenantRequirement(tenantId)));
 
-    // LOCAL IDENTITY POLICIES
+    // Local identity policies
     options.AddPolicy("Local_Admin", policy =>
-        policy.RequireRole("Admin")); // Uses ASP.NET Identity roles
+        policy.RequireRole("Admin"));
 
     options.AddPolicy("Local_User", policy =>
-        policy.RequireRole("User", "Admin")); // Uses ASP.NET Identity roles
+        policy.RequireRole("User", "Admin"));
 });
 
 // Add MVC Controllers with Views
 builder.Services.AddControllersWithViews();
 
-// Add logging for debugging authorization
+// Add logging
 builder.Services.AddLogging(logging =>
 {
     logging.AddConsole();
     logging.AddDebug();
     if (builder.Environment.IsDevelopment())
     {
-        logging.SetMinimumLevel(LogLevel.Debug);
+        logging.SetMinimumLevel(LogLevel.Information);
     }
 });
 
@@ -118,21 +113,20 @@ using (var scope = app.Services.CreateScope())
     try
     {
         context.Database.EnsureCreated();
-        Console.WriteLine("Database created/verified successfully.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database creation error: {ex.Message}");
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Database creation failed");
     }
 
-    // Create roles - Enhanced for Task 2A
+    // Create roles
     string[] roles = { "Admin", "User", "Manager", "HR", "HR Manager" };
     foreach (var role in roles)
     {
         if (!await roleManager.RoleExistsAsync(role))
         {
             await roleManager.CreateAsync(new IdentityRole(role));
-            Console.WriteLine($"Role '{role}' created.");
         }
     }
 
@@ -154,11 +148,6 @@ using (var scope = app.Services.CreateScope())
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(adminUser, "Admin");
-            Console.WriteLine($"Admin user created and assigned Admin role.");
-        }
-        else
-        {
-            Console.WriteLine($"Error creating admin user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
         }
     }
 }
@@ -169,32 +158,6 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
-else
-{
-    // DEBUGGING: Add route debugging in development for Task 2A
-    app.MapGet("/debug/routes", (LinkGenerator linkGenerator) => 
-    {
-        var routes = new List<string>
-        {
-            linkGenerator.GetPathByAction("Index", "AuthorizationTest"),
-            linkGenerator.GetPathByAction("AdminOnly", "AuthorizationTest"),
-            linkGenerator.GetPathByAction("Details", "Profile"),
-            linkGenerator.GetPathByAction("Index", "Home")
-        };
-        return Results.Json(routes);
-    });
-
-    // Debug authorization policies
-    app.MapGet("/debug/policies", (IAuthorizationPolicyProvider policyProvider) =>
-    {
-        var policies = new[]
-        {
-            "Admin", "Manager_or_Admin", "HR_Access", 
-            "Local_Admin", "Local_User"
-        };
-        return Results.Json(policies);
-    });
-}
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
@@ -203,7 +166,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ENHANCED ROUTING for Task 2A
+// Enhanced routing
 app.MapControllerRoute(
     name: "authorisation_test",
     pattern: "AuthorisationTest/{action=Index}",
@@ -229,15 +192,9 @@ app.MapControllerRoute(
     pattern: "signin",
     defaults: new { controller = "Account", action = "Login" });
 
-// DEFAULT ROUTE MUST BE LAST
+// Default route must be last
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");  
-
-Console.WriteLine("=== Authorization Policies Configured ===");
-Console.WriteLine("Available policies: Admin, Manager_or_Admin, HR_Access, Local_Admin, Local_User");
-Console.WriteLine("Test URL: /AuthorizationTest");
-Console.WriteLine("Debug URLs: /debug/routes, /debug/policies");
-Console.WriteLine("=== End Authorization Debug ===");
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
