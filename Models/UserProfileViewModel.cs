@@ -11,10 +11,6 @@ namespace AuthenticationApp.Models // or Authentication_App.Models
         public bool IsAuthenticated { get; set; }
         public string AuthenticationStatusDisplay { get; set; } = "Not Authenticated";
         
-        // Organization Information (from claims - fallback)
-        public string JobTitle { get; set; } = "Not specified";
-        public string Department { get; set; } = "Not specified";
-        
         // Roles (from Identity database)
         public List<string> Roles { get; set; } = new List<string>();
         public bool HasAdminRole { get; set; }

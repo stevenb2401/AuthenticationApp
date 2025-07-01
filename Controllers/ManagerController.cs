@@ -6,7 +6,7 @@ using AuthenticationApp.Models;
 
 namespace AuthenticationApp.Controllers
 {
-    [Authorize(Policy = "ManagerOrAdmin")]
+    [Authorize(Policy = "Manager_or_Admin")]
     public class ManagerController : Controller
     {
         private readonly UserManager<IdentityUser> _userManager;

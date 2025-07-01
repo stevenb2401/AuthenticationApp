@@ -26,104 +26,9 @@
         </div>
     }
 
-    <div class="row">
-        <!-- Profile Summary Card -->
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-success text-white">
-                    <h5><i class="fas fa-id-card"></i> Profile Summary</h5>
-                </div>
-                <div class="card-body">
-                    @if (userInfo != null)
-                    {
-                        <p><strong>Display Name:</strong><br>@userInfo.DisplayName</p>
-                        <p><strong>Email:</strong><br>@userInfo.Email</p>
-                        <p><strong>Authentication:</strong><br>
-                            <span class="badge @(userInfo.IsAuthenticated ? "bg-success" : "bg-danger")">
-                                @(userInfo.IsAuthenticated ? "Authenticated" : "Not Authenticated")
-                            </span>
-                        </p>
-                        <p><strong>User ID:</strong><br><code class="small">@userInfo.UserId</code></p>
-                    }
-                    else
-                    {
-                        <p class="text-muted">Unable to load profile summary</p>
-                    }
-                </div>
-                <div class="card-footer">
-                    <a href="@Url.Action("Details", "Profile")" class="btn btn-success btn-sm w-100">
-                        <i class="fas fa-eye"></i> View Full Profile
-                    </a>
-                </div>
-            </div>
-        </div>
+    <div class="row"></div>
 
-        <!-- Claims Information Card -->
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-info text-white">
-                    <h5><i class="fas fa-certificate"></i> Claims Information</h5>
-                </div>
-                <div class="card-body">
-                    @if (userInfo != null)
-                    {
-                        <p><strong>Total Claims:</strong> @userInfo.ClaimsCount</p>
-                        <p><strong>Assigned Roles:</strong> @userInfo.RoleCount</p>
-                        <p class="text-muted small">
-                            Claims contain your user information and permissions from Azure AD.
-                        </p>
-                    }
-                    else
-                    {
-                        <p class="text-muted">Unable to load claims information</p>
-                    }
-                </div>
-                <div class="card-footer">
-                    <div class="d-grid gap-2">
-                        <a href="@Url.Action("Claims", "Profile")" class="btn btn-info btn-sm">
-                            <i class="fas fa-list"></i> View Claims
-                        </a>
-                        <a href="@Url.Action("DebugClaims", "Profile")" class="btn btn-outline-info btn-sm">
-                            <i class="fas fa-bug"></i> Debug Claims
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions Card -->
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-warning text-dark">
-                    <h5><i class="fas fa-tools"></i> Quick Actions</h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">Common profile-related tasks and navigation</p>
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-check text-success"></i> View profile details</li>
-                        <li><i class="fas fa-check text-success"></i> Check authentication status</li>
-                        <li><i class="fas fa-check text-success"></i> Review assigned roles</li>
-                        <li><i class="fas fa-check text-success"></i> Debug claims information</li>
-                    </ul>
-                </div>
-                <div class="card-footer">
-                    <div class="d-grid gap-2">
-                        <a href="@Url.Action("Index", "Home")" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-home"></i> Back to Home
-                        </a>
-                        @if (User.IsInRole("Admin") || User.IsInRole("Administrator"))
-                        {
-                            <a href="#" class="btn btn-outline-danger btn-sm" onclick="alert('Admin features coming soon!')">
-                                <i class="fas fa-shield-alt"></i> Admin Panel
-                            </a>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Activity Section -->
+    <!-- Profile Details -->
     <div class="row mt-4">
         <div class="col-md-12">
             <div class="card">
@@ -137,20 +42,6 @@
                                 <i class="fas fa-user-alt d-block mb-2" style="font-size: 2rem;"></i>
                                 <strong>Profile Details</strong><br>
                                 <small>Complete profile information</small>
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <a href="@Url.Action("Claims", "Profile")" class="btn btn-outline-info btn-lg w-100 mb-2">
-                                <i class="fas fa-list-alt d-block mb-2" style="font-size: 2rem;"></i>
-                                <strong>Claims View</strong><br>
-                                <small>Simple claims listing</small>
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <a href="@Url.Action("DebugClaims", "Profile")" class="btn btn-outline-warning btn-lg w-100 mb-2">
-                                <i class="fas fa-bug d-block mb-2" style="font-size: 2rem;"></i>
-                                <strong>Debug Claims</strong><br>
-                                <small>Detailed claims debugging</small>
                             </a>
                         </div>
                         <div class="col-md-3">

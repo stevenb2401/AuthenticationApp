@@ -24,7 +24,17 @@ namespace Authentication_App.Models
         [Display(Name = "Role")]
         public string Role { get; set; } = string.Empty;
 
-        // Add this property for the dropdown (even though we're not using dropdown now)
+        // ADD THESE FIELDS - These are the ones that appear in your profile
+        [Required(ErrorMessage = "Display Name is required.")]
+        [Display(Name = "Display Name")]
+        [StringLength(100, ErrorMessage = "Display name cannot exceed 100 characters")]
+        public string DisplayName { get; set; } = string.Empty;
+
+        [Phone(ErrorMessage = "Please enter a valid phone number")]
+        [Display(Name = "Phone Number")]
+        public string? PhoneNumber { get; set; }
+
+        // Keep the existing property
         public List<string> AvailableRoles { get; set; } = new List<string>();
     }
 }

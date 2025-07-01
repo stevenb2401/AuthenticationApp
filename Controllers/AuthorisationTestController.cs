@@ -22,10 +22,11 @@ namespace AuthenticationApp.Controllers
         {
             _logger.LogInformation("Authorisation test dashboard accessed by user: {User}", User.Identity?.Name);
 
+            // Fixed policy names to match your actual Program.cs configuration
             var policies = new[]
             {
-                "AdminOnly", "ManagerOrAdmin", "HR_Access",  
-                "LocalAdminOnly", "LocalUserOnly"
+                "Admin", "Manager_or_Admin", "HR_Access",  
+                "Local_Admin", "Local_User"
             };
 
             var policyResults = new Dictionary<string, bool>();
@@ -53,14 +54,14 @@ namespace AuthenticationApp.Controllers
             return View();
         }
 
-        [Authorize(Policy = "AdminOnly")]
+        [Authorize(Policy = "Admin")]
         public IActionResult AdminOnly()
         {
             _logger.LogInformation("Admin only page accessed by user: {User}", User.Identity?.Name);
             return View();
         }
 
-        [Authorize(Policy = "ManagerOrAdmin")]
+        [Authorize(Policy = "Manager_or_Admin")]
         public IActionResult ManagerOrAdmin()
         {
             _logger.LogInformation("Manager or Admin page accessed by user: {User}", User.Identity?.Name);
@@ -90,7 +91,7 @@ namespace AuthenticationApp.Controllers
             return View();
         }
 
-        [Authorize(Policy = "LocalAdminOnly")]
+        [Authorize(Policy = "Local_Admin")]
         public IActionResult LocalAdminOnly()
         {
             _logger.LogInformation("Local Admin only page accessed by user: {User}", User.Identity?.Name);

@@ -7,7 +7,7 @@ using System.Security.Claims;
 
 namespace AuthenticationApp.Controllers
 {
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "Admin")]
     public class UserManagementController : Controller
     {
         private readonly UserManager<IdentityUser> _userManager;
@@ -126,9 +126,9 @@ namespace AuthenticationApp.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
-            var model = new CreateUserViewModel
+            var model = new Authentication_App.Models.CreateUserViewModel
             {
-                AvailableRoles = await GetAvailableRolesAsync()
+                AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" }
             };
 
             return View(model);
@@ -139,11 +139,11 @@ namespace AuthenticationApp.Controllers
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(CreateUserViewModel model)
+        public async Task<IActionResult> Create(Authentication_App.Models.CreateUserViewModel model)
         {
             if (!ModelState.IsValid)
             {
-                model.AvailableRoles = await GetAvailableRolesAsync();
+                model.AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" };
                 return View(model);
             }
 
@@ -154,18 +154,18 @@ namespace AuthenticationApp.Controllers
                 if (existingUser != null)
                 {
                     ModelState.AddModelError("Email", "A user with this email already exists.");
-                    model.AvailableRoles = await GetAvailableRolesAsync();
+                    model.AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" };
                     return View(model);
                 }
 
-                // Create new user
+                // Create new user using the updated model structure
                 var user = new IdentityUser
                 {
-                    UserName = model.UserName,
+                    UserName = model.DisplayName, // Use DisplayName from the updated model
                     Email = model.Email,
-                    EmailConfirmed = model.EmailConfirmed,
+                    EmailConfirmed = true, // Default to true for admin-created users
                     PhoneNumber = model.PhoneNumber,
-                    LockoutEnabled = !model.IsEnabled
+                    LockoutEnabled = false // Default to enabled accounts
                 };
 
                 var result = await _userManager.CreateAsync(user, model.Password);
@@ -175,12 +175,12 @@ namespace AuthenticationApp.Controllers
                     _logger.LogInformation("New user created: {UserName} by admin: {Admin}", 
                         user.UserName, User.Identity?.Name);
 
-                    // Assign selected roles
-                    if (model.SelectedRoles.Any())
+                    // Assign the selected role (single role from the simple dropdown)
+                    if (!string.IsNullOrEmpty(model.Role))
                     {
-                        await _userManager.AddToRolesAsync(user, model.SelectedRoles);
-                        _logger.LogInformation("Assigned roles {Roles} to user {UserName}", 
-                            string.Join(", ", model.SelectedRoles), user.UserName);
+                        await _userManager.AddToRoleAsync(user, model.Role);
+                        _logger.LogInformation("Assigned role {Role} to user {UserName}", 
+                            model.Role, user.UserName);
                     }
 
                     TempData["Success"] = $"User '{user.UserName}' created successfully.";
@@ -200,7 +200,7 @@ namespace AuthenticationApp.Controllers
                 ModelState.AddModelError(string.Empty, "An error occurred while creating the user.");
             }
 
-            model.AvailableRoles = await GetAvailableRolesAsync();
+            model.AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" };
             return View(model);
         }
 
@@ -226,22 +226,17 @@ namespace AuthenticationApp.Controllers
                 var userRoles = await _userManager.GetRolesAsync(user);
                 var userClaims = await _userManager.GetClaimsAsync(user);
 
-                var model = new EditUserViewModel
+                var model = new Authentication_App.Models.EditUserViewModel
                 {
                     Id = user.Id,
                     UserName = user.UserName ?? string.Empty,
                     Email = user.Email ?? string.Empty,
                     PhoneNumber = user.PhoneNumber,
-                    IsEnabled = !user.LockoutEnabled,
                     EmailConfirmed = user.EmailConfirmed,
-                    PhoneNumberConfirmed = user.PhoneNumberConfirmed,
-                    TwoFactorEnabled = user.TwoFactorEnabled,
-                    LockoutEnabled = user.LockoutEnabled,
+                    IsLockedOut = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.Now,
                     LockoutEnd = user.LockoutEnd,
-                    AccessFailedCount = user.AccessFailedCount,
-                    CreatedDate = DateTime.Now, // Would come from audit table
                     CurrentRoles = userRoles.ToList(),
-                    AvailableRoles = await GetAvailableRolesAsync()
+                    AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" }
                 };
 
                 return View(model);
@@ -275,29 +270,19 @@ namespace AuthenticationApp.Controllers
 
                 var userRoles = await _userManager.GetRolesAsync(user);
 
-                var model = new EditUserViewModel
+                var model = new Authentication_App.Models.EditUserViewModel
                 {
                     Id = user.Id,
                     UserName = user.UserName ?? string.Empty,
                     Email = user.Email ?? string.Empty,
                     PhoneNumber = user.PhoneNumber,
-                    IsEnabled = !user.LockoutEnabled,
                     EmailConfirmed = user.EmailConfirmed,
-                    PhoneNumberConfirmed = user.PhoneNumberConfirmed,
-                    TwoFactorEnabled = user.TwoFactorEnabled,
-                    LockoutEnabled = user.LockoutEnabled,
+                    IsLockedOut = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.Now,
                     LockoutEnd = user.LockoutEnd,
-                    AccessFailedCount = user.AccessFailedCount,
                     CurrentRoles = userRoles.ToList(),
-                    SelectedRoles = userRoles.ToList(),
-                    AvailableRoles = await GetAvailableRolesAsync()
+                    AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" },
+                    Role = userRoles.FirstOrDefault() ?? string.Empty
                 };
-
-                // Mark selected roles
-                foreach (var role in model.AvailableRoles)
-                {
-                    role.IsSelected = model.CurrentRoles.Contains(role.RoleName);
-                }
 
                 return View(model);
             }
@@ -314,11 +299,11 @@ namespace AuthenticationApp.Controllers
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(EditUserViewModel model)
+        public async Task<IActionResult> Edit(Authentication_App.Models.EditUserViewModel model)
         {
             if (!ModelState.IsValid)
             {
-                model.AvailableRoles = await GetAvailableRolesAsync();
+                model.AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" };
                 return View(model);
             }
 
@@ -335,9 +320,6 @@ namespace AuthenticationApp.Controllers
                 user.Email = model.Email;
                 user.PhoneNumber = model.PhoneNumber;
                 user.EmailConfirmed = model.EmailConfirmed;
-                user.PhoneNumberConfirmed = model.PhoneNumberConfirmed;
-                user.TwoFactorEnabled = model.TwoFactorEnabled;
-                user.LockoutEnabled = !model.IsEnabled;
 
                 var result = await _userManager.UpdateAsync(user);
 
@@ -348,21 +330,18 @@ namespace AuthenticationApp.Controllers
 
                     // Update roles
                     var currentRoles = await _userManager.GetRolesAsync(user);
-                    var rolesToRemove = currentRoles.Except(model.SelectedRoles);
-                    var rolesToAdd = model.SelectedRoles.Except(currentRoles);
-
-                    if (rolesToRemove.Any())
+                    
+                    // Remove all current roles if a new role is specified
+                    if (!string.IsNullOrEmpty(model.Role) && !currentRoles.Contains(model.Role))
                     {
-                        await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
-                        _logger.LogInformation("Removed roles {Roles} from user {UserName}", 
-                            string.Join(", ", rolesToRemove), user.UserName);
-                    }
-
-                    if (rolesToAdd.Any())
-                    {
-                        await _userManager.AddToRolesAsync(user, rolesToAdd);
-                        _logger.LogInformation("Added roles {Roles} to user {UserName}", 
-                            string.Join(", ", rolesToAdd), user.UserName);
+                        if (currentRoles.Any())
+                        {
+                            await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                        }
+                        
+                        await _userManager.AddToRoleAsync(user, model.Role);
+                        _logger.LogInformation("Updated role to {Role} for user {UserName}", 
+                            model.Role, user.UserName);
                     }
 
                     TempData["Success"] = $"User '{user.UserName}' updated successfully.";
@@ -382,7 +361,7 @@ namespace AuthenticationApp.Controllers
                 ModelState.AddModelError(string.Empty, "An error occurred while updating the user.");
             }
 
-            model.AvailableRoles = await GetAvailableRolesAsync();
+            model.AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" };
             return View(model);
         }
 
@@ -545,7 +524,7 @@ namespace AuthenticationApp.Controllers
         #region Helper Methods
 
         /// <summary>
-        /// Get available roles for selection
+        /// Get available roles for selection (simplified version)
         /// </summary>
         private async Task<List<RoleSelectionViewModel>> GetAvailableRolesAsync()
         {

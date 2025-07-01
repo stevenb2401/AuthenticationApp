@@ -38,9 +38,10 @@ namespace Authentication_App.Controllers
 
             var user = new IdentityUser
             {
-                UserName = model.Email,
+                UserName = model.DisplayName, // Use DisplayName instead of Email
                 Email = model.Email,
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                PhoneNumber = model.PhoneNumber // Include phone number
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -51,7 +52,7 @@ namespace Authentication_App.Controllers
                     await _userManager.AddToRoleAsync(user, model.Role);
                 }
 
-                TempData["SuccessMessage"] = $"User {model.Email} created successfully!";
+                TempData["SuccessMessage"] = $"User {model.DisplayName} ({model.Email}) created successfully!";
                 return RedirectToAction("UserList"); // Redirect to the User List page
             }
 
