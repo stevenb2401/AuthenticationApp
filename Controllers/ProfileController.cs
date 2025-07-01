@@ -62,15 +62,7 @@ namespace AuthenticationApp.Controllers // or Authentication_App.Controllers
                               User.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid")?.Value ?? 
                               "Not available"
                 };
-
-                // Debug output to verify data is being loaded correctly
-                Console.WriteLine($"Profile Debug - DisplayName: {model.DisplayName}");
-                Console.WriteLine($"Profile Debug - Email: {model.Email}");
-                Console.WriteLine($"Profile Debug - PhoneNumber: {model.PhoneNumber ?? "NULL"}");
-                Console.WriteLine($"Profile Debug - User ID: {model.ObjectId}");
-                Console.WriteLine($"Profile Debug - Roles: {string.Join(", ", model.Roles)}");
-
-                return View(model);
+                                return View(model);
             }
             catch (Exception ex)
             {
@@ -79,18 +71,5 @@ namespace AuthenticationApp.Controllers // or Authentication_App.Controllers
             }
         }
 
-        [HttpGet]
-        public IActionResult Claims()
-        {
-            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
-            return View(claims);
-        }
-
-        [HttpGet]
-        public IActionResult DebugClaims()
-        {
-            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
-            return View(claims);
-        }
     }
 }

@@ -24,9 +24,6 @@ namespace AuthenticationApp.Services
                 .Select(c => c.Value)
                 .ToList();
 
-            _logger.LogDebug("User has roles: {Roles}", string.Join(", ", userRoles));
-            _logger.LogDebug("Required roles: {RequiredRoles}", string.Join(", ", requirement.RequiredRoles));
-
             if (requirement.RequireAllRoles)
             {
                 // User must have ALL required roles
@@ -74,7 +71,6 @@ namespace AuthenticationApp.Services
         {
             var userTenantId = context.User.FindFirst("tid")?.Value;
 
-            _logger.LogDebug("User tenant ID: {UserTenantId}, Required: {RequiredTenantId}", 
                 userTenantId, requirement.RequiredTenantId);
 
             if (string.Equals(userTenantId, requirement.RequiredTenantId, StringComparison.OrdinalIgnoreCase))
@@ -108,7 +104,6 @@ namespace AuthenticationApp.Services
         {
             var claimValue = context.User.FindFirst(requirement.ClaimType)?.Value;
 
-            _logger.LogDebug("Checking claim {ClaimType} with value {ClaimValue}", 
                 requirement.ClaimType, claimValue);
 
             if (claimValue != null && requirement.AllowedValues.Contains(claimValue, StringComparer.OrdinalIgnoreCase))
@@ -143,8 +138,6 @@ namespace AuthenticationApp.Services
             var userDepartment = context.User.FindFirst("department")?.Value ?? 
                                 context.User.FindFirst("extension_Department")?.Value;
 
-            _logger.LogDebug("User department: {Department}", userDepartment);
-
             if (userDepartment != null && 
                 requirement.AllowedDepartments.Contains(userDepartment, StringComparer.OrdinalIgnoreCase))
             {
@@ -177,8 +170,6 @@ namespace AuthenticationApp.Services
             var now = DateTime.Now;
             var currentTime = now.TimeOfDay;
             var currentDay = now.DayOfWeek;
-
-            _logger.LogDebug("Current time: {Time}, Day: {Day}", currentTime, currentDay);
 
             var isValidDay = requirement.AllowedDays.Contains(currentDay);
             var isValidTime = currentTime >= requirement.StartTime && currentTime <= requirement.EndTime;

@@ -37,8 +37,6 @@ namespace AuthenticationApp.Controllers
                 {
                     var result = await _authorizationService.AuthorizeAsync(User, policy);
                     policyResults[policy] = result.Succeeded;
-                    
-                    _logger.LogDebug("Policy {Policy}: {Result}", policy, result.Succeeded ? "AUTHORISED" : "DENIED");
                 }
                 catch (Exception ex)
                 {
@@ -126,33 +124,6 @@ namespace AuthenticationApp.Controllers
                 ViewBag.Error = $"Error testing policy: {ex.Message}";
                 return View();
             }
-        }
-
-        /// <summary>
-        /// Shows detailed user claims for debugging
-        /// </summary>
-        public IActionResult UserInfo()
-        {
-            var userInfo = new
-            {
-                Name = User.Identity?.Name,
-                IsAuthenticated = User.Identity?.IsAuthenticated,
-                AuthenticationType = User.Identity?.AuthenticationType,
-                Claims = User.Claims.Select(c => new { c.Type, c.Value, c.Issuer }).ToList(),
-                Roles = User.FindAll("roles")
-                    .Union(User.FindAll(System.Security.Claims.ClaimTypes.Role))
-                    .Union(User.FindAll("groups"))
-                    .Select(c => c.Value)
-                    .Distinct()
-                    .ToList(),
-                Department = User.FindFirst("department")?.Value ?? 
-                           User.FindFirst("extension_Department")?.Value ?? "Not specified",
-                TenantId = User.FindFirst("tid")?.Value ?? "Not found",
-                ObjectId = User.FindFirst("oid")?.Value ?? "Not found"
-            };
-
-            ViewBag.UserInfo = userInfo;
-            return View();
         }
 
         /// <summary>

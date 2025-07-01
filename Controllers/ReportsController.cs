@@ -19,10 +19,6 @@ namespace Authentication_App.Controllers
         {
             ViewData["Title"] = "Admin Reports"; // Set the title for the Admin view
 
-            // Debugging: Log current user roles (optional)
-            var roles = User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value);
-            Console.WriteLine($"User Roles: {string.Join(", ", roles)}");
-
             // Ensure the user is truly an Admin (double-check)
             if (!User.IsInRole("Admin"))
             {

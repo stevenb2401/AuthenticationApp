@@ -124,14 +124,6 @@
                         </div>
                         <div class="col-md-4">
                             <strong>User Roles:</strong><br>
-                            @{
-                                var userRoles = User.FindAll("roles")
-                                    .Union(User.FindAll(System.Security.Claims.ClaimTypes.Role))
-                                    .Union(User.FindAll("groups"))
-                                    .Select(c => c.Value)
-                                    .Distinct()
-                                    .ToList();
-                            }
                             @if (userRoles.Any())
                             {
                                 @foreach (var role in userRoles)
@@ -146,9 +138,6 @@
                         </div>
                         <div class="col-md-4">
                             <strong>Department:</strong><br>
-                            @{
-                                var department = User.FindFirst("department")?.Value ?? User.FindFirst("extension_Department")?.Value;
-                            }
                             @if (!string.IsNullOrEmpty(department))
                             {
                                 <span class="badge bg-info">@department</span>
