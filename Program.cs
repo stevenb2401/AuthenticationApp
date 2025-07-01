@@ -65,15 +65,14 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = options.DefaultPolicy;
 
     // ROLE-BASED POLICIES
-    options.AddPolicy("AdminOnly", policy =>
+    options.AddPolicy("Admin", policy =>
         policy.AddRequirements(new RoleRequirement(new[] { "Admin", "Administrator", "Global Administrator" })));
 
-    options.AddPolicy("ManagerOrAdmin", policy =>
+    options.AddPolicy("Manager_or_Admin", policy =>
         policy.AddRequirements(new RoleRequirement(new[] { "Manager", "Admin", "Administrator" })));
 
     options.AddPolicy("HR_Access", policy =>
         policy.AddRequirements(new RoleRequirement(new[] { "HR", "Human Resources", "HR Manager" })));
-
 
     // CLAIM-BASED POLICIES
     options.AddPolicy("VerifiedUsers", policy =>
@@ -84,11 +83,11 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("SpecificTenant", policy =>
         policy.AddRequirements(new TenantRequirement(tenantId)));
 
-    // ADDITIONAL POLICIES for your existing Identity setup
-    options.AddPolicy("LocalAdminOnly", policy =>
+    // LOCAL IDENTITY POLICIES
+    options.AddPolicy("Local_Admin", policy =>
         policy.RequireRole("Admin")); // Uses ASP.NET Identity roles
 
-    options.AddPolicy("LocalUserOnly", policy =>
+    options.AddPolicy("Local_User", policy =>
         policy.RequireRole("User", "Admin")); // Uses ASP.NET Identity roles
 });
 
@@ -190,8 +189,8 @@ else
     {
         var policies = new[]
         {
-            "AdminOnly", "ManagerOrAdmin", "HR_Access", 
-            "LocalAdminOnly", "LocalUserOnly"
+            "Admin", "Manager_or_Admin", "HR_Access", 
+            "Local_Admin", "Local_User"
         };
         return Results.Json(policies);
     });
@@ -236,7 +235,7 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");  
 
 Console.WriteLine("=== Authorization Policies Configured ===");
-Console.WriteLine("Available policies: AdminOnly, ManagerOrAdmin, HR_Access, VerifiedUsers");
+Console.WriteLine("Available policies: Admin, Manager_or_Admin, HR_Access, Local_Admin, Local_User");
 Console.WriteLine("Test URL: /AuthorizationTest");
 Console.WriteLine("Debug URLs: /debug/routes, /debug/policies");
 Console.WriteLine("=== End Authorization Debug ===");

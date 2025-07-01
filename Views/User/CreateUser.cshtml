@@ -30,27 +30,46 @@
                     <form method="post" asp-action="CreateUser">
                         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                         
-                        <div class="mb-3">
-                            <label asp-for="Email" class="form-label">Email Address</label>
-                            <input asp-for="Email" type="email" class="form-control" placeholder="Enter email address" />
-                            <span asp-validation-for="Email" class="text-danger"></span>
-                        </div>
+                        <!-- Basic Information Section -->
+                        <h5 class="mb-3 text-primary">Basic Information</h5>
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label asp-for="Password" class="form-label">Password</label>
+                                <label asp-for="DisplayName" class="form-label"></label>
+                                <input asp-for="DisplayName" class="form-control" placeholder="Enter display name" />
+                                <span asp-validation-for="DisplayName" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Email" class="form-label"></label>
+                                <input asp-for="Email" type="email" class="form-control" placeholder="Enter email address" />
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label asp-for="PhoneNumber" class="form-label"></label>
+                            <input asp-for="PhoneNumber" type="tel" class="form-control" placeholder="Enter phone number (optional)" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                        </div>
+                        
+                        <!-- Security Section -->
+                        <h5 class="mb-3 text-warning">Security & Access</h5>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Password" class="form-label"></label>
                                 <input asp-for="Password" type="password" class="form-control" placeholder="Enter password" />
                                 <span asp-validation-for="Password" class="text-danger"></span>
                             </div>
                             <div class="col-md-6">
-                                <label asp-for="ConfirmPassword" class="form-label">Confirm Password</label>
+                                <label asp-for="ConfirmPassword" class="form-label"></label>
                                 <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="Confirm password" />
                                 <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
                             </div>
                         </div>
                         
                         <div class="mb-3">
-                            <label asp-for="Role" class="form-label">Role</label>
+                            <label asp-for="Role" class="form-label"></label>
                             <select asp-for="Role" class="form-select">
                                 <option value="">-- Select a Role --</option>
                                 <option value="User">User</option>

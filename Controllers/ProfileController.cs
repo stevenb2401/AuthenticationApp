@@ -35,7 +35,7 @@ namespace AuthenticationApp.Controllers // or Authentication_App.Controllers
                 // Get user roles from Identity database
                 var userRoles = await _userManager.GetRolesAsync(currentUser);
 
-                // Create the view model with Identity database values
+                // Create the view model with Identity database values (SAME AS EDITUSER)
                 var model = new UserProfileViewModel
                 {
                     // IMPORTANT: These come from the Identity database (same as EditUser)
@@ -43,11 +43,11 @@ namespace AuthenticationApp.Controllers // or Authentication_App.Controllers
                     Email = currentUser.Email ?? "No email found", 
                     PhoneNumber = currentUser.PhoneNumber, // This will now show the edited phone number
                     
-                    // Authentication and security status
+                    // Authentication and security status (from Identity database)
                     IsAuthenticated = User.Identity?.IsAuthenticated ?? false,
                     AuthenticationStatusDisplay = User.Identity?.IsAuthenticated == true ? "Authenticated" : "Not Authenticated",
                     
-                    // Roles from Identity database
+                    // Roles from Identity database (same as EditUser)
                     Roles = userRoles.ToList(),
                     HasAdminRole = userRoles.Contains("Admin"),
                     
@@ -57,25 +57,18 @@ namespace AuthenticationApp.Controllers // or Authentication_App.Controllers
                     IsLockedOut = currentUser.LockoutEnd.HasValue && currentUser.LockoutEnd > DateTimeOffset.Now,
                     LockoutEnd = currentUser.LockoutEnd,
                     
-                    // Try to get additional info from claims (fallback)
-                    JobTitle = User.FindFirst("jobTitle")?.Value ?? 
-                              User.FindFirst("extension_JobTitle")?.Value ?? 
-                              "Not specified",
-                    
-                    Department = User.FindFirst("department")?.Value ?? 
-                                User.FindFirst("extension_Department")?.Value ?? 
-                                "Not specified",
-                    
+                    // Try to get additional info from claims (fallback)            
                     TenantId = User.FindFirst("tid")?.Value ?? 
                               User.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid")?.Value ?? 
                               "Not available"
                 };
 
-                // Debug output to verify data is being loaded
+                // Debug output to verify data is being loaded correctly
                 Console.WriteLine($"Profile Debug - DisplayName: {model.DisplayName}");
                 Console.WriteLine($"Profile Debug - Email: {model.Email}");
                 Console.WriteLine($"Profile Debug - PhoneNumber: {model.PhoneNumber ?? "NULL"}");
                 Console.WriteLine($"Profile Debug - User ID: {model.ObjectId}");
+                Console.WriteLine($"Profile Debug - Roles: {string.Join(", ", model.Roles)}");
 
                 return View(model);
             }

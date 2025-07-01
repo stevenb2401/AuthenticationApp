@@ -6,7 +6,7 @@ using AuthenticationApp.Models;
 
 namespace AuthenticationApp.Controllers
 {
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "Admin")]
     public class AdminController : Controller
     {
         private readonly ILogger<AdminController> _logger;
