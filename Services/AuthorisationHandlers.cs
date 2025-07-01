@@ -24,6 +24,9 @@ namespace AuthenticationApp.Services
                 .Select(c => c.Value)
                 .ToList();
 
+            _logger.LogDebug("User has roles: {UserRoles}, Required: {RequiredRoles}", 
+                string.Join(", ", userRoles), string.Join(", ", requirement.RequiredRoles));
+
             if (requirement.RequireAllRoles)
             {
                 // User must have ALL required roles
@@ -49,140 +52,6 @@ namespace AuthenticationApp.Services
                 {
                     _logger.LogWarning("User denied: no matching roles found");
                 }
-            }
-
-            return Task.CompletedTask;
-        }
-    }
-
-    /// <summary>
-    /// Handler for tenant-based authorization
-    /// </summary>
-    public class TenantAuthorizationHandler : AuthorizationHandler<TenantRequirement>
-    {
-        private readonly ILogger<TenantAuthorizationHandler> _logger;
-
-        public TenantAuthorizationHandler(ILogger<TenantAuthorizationHandler> logger)
-        {
-            _logger = logger;
-        }
-
-        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, TenantRequirement requirement)
-        {
-            var userTenantId = context.User.FindFirst("tid")?.Value;
-
-                userTenantId, requirement.RequiredTenantId);
-
-            if (string.Equals(userTenantId, requirement.RequiredTenantId, StringComparison.OrdinalIgnoreCase))
-            {
-                context.Succeed(requirement);
-                _logger.LogInformation("User authorized: correct tenant");
-            }
-            else
-            {
-                _logger.LogWarning("User denied: incorrect tenant. User: {UserTenant}, Required: {RequiredTenant}", 
-                    userTenantId, requirement.RequiredTenantId);
-            }
-
-            return Task.CompletedTask;
-        }
-    }
-
-    /// <summary>
-    /// Handler for claim-based authorization
-    /// </summary>
-    public class ClaimAuthorizationHandler : AuthorizationHandler<ClaimRequirement>
-    {
-        private readonly ILogger<ClaimAuthorizationHandler> _logger;
-
-        public ClaimAuthorizationHandler(ILogger<ClaimAuthorizationHandler> logger)
-        {
-            _logger = logger;
-        }
-
-        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, ClaimRequirement requirement)
-        {
-            var claimValue = context.User.FindFirst(requirement.ClaimType)?.Value;
-
-                requirement.ClaimType, claimValue);
-
-            if (claimValue != null && requirement.AllowedValues.Contains(claimValue, StringComparer.OrdinalIgnoreCase))
-            {
-                context.Succeed(requirement);
-                _logger.LogInformation("User authorized: valid claim value");
-            }
-            else
-            {
-                _logger.LogWarning("User denied: claim {ClaimType} value {ClaimValue} not in allowed values", 
-                    requirement.ClaimType, claimValue);
-            }
-
-            return Task.CompletedTask;
-        }
-    }
-
-    /// <summary>
-    /// Handler for department-based authorization
-    /// </summary>
-    public class DepartmentAuthorizationHandler : AuthorizationHandler<DepartmentRequirement>
-    {
-        private readonly ILogger<DepartmentAuthorizationHandler> _logger;
-
-        public DepartmentAuthorizationHandler(ILogger<DepartmentAuthorizationHandler> logger)
-        {
-            _logger = logger;
-        }
-
-        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, DepartmentRequirement requirement)
-        {
-            var userDepartment = context.User.FindFirst("department")?.Value ?? 
-                                context.User.FindFirst("extension_Department")?.Value;
-
-            if (userDepartment != null && 
-                requirement.AllowedDepartments.Contains(userDepartment, StringComparer.OrdinalIgnoreCase))
-            {
-                context.Succeed(requirement);
-                _logger.LogInformation("User authorized: valid department");
-            }
-            else
-            {
-                _logger.LogWarning("User denied: department {Department} not in allowed list", userDepartment);
-            }
-
-            return Task.CompletedTask;
-        }
-    }
-
-    /// <summary>
-    /// Handler for business hours authorization
-    /// </summary>
-    public class BusinessHoursAuthorizationHandler : AuthorizationHandler<BusinessHoursRequirement>
-    {
-        private readonly ILogger<BusinessHoursAuthorizationHandler> _logger;
-
-        public BusinessHoursAuthorizationHandler(ILogger<BusinessHoursAuthorizationHandler> logger)
-        {
-            _logger = logger;
-        }
-
-        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, BusinessHoursRequirement requirement)
-        {
-            var now = DateTime.Now;
-            var currentTime = now.TimeOfDay;
-            var currentDay = now.DayOfWeek;
-
-            var isValidDay = requirement.AllowedDays.Contains(currentDay);
-            var isValidTime = currentTime >= requirement.StartTime && currentTime <= requirement.EndTime;
-
-            if (isValidDay && isValidTime)
-            {
-                context.Succeed(requirement);
-                _logger.LogInformation("User authorized: within business hours");
-            }
-            else
-            {
-                _logger.LogWarning("User denied: outside business hours. Day valid: {DayValid}, Time valid: {TimeValid}", 
-                    isValidDay, isValidTime);
             }
 
             return Task.CompletedTask;

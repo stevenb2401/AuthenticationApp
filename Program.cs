@@ -10,9 +10,8 @@ using AuthenticationApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
 // Register DbContext with connection string
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."),
     sqlOptions => sqlOptions.EnableRetryOnFailure()));
@@ -48,18 +47,16 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/AccessDenied";
 });
 
-// Register authorization handlers
+// REGISTER ONLY USED AUTHORIZATION HANDLERS
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
-builder.Services.AddScoped<IAuthorizationHandler, TenantAuthorizationHandler>();
-builder.Services.AddScoped<IAuthorizationHandler, ClaimAuthorizationHandler>();
 
-// Configure authorization policies
+// CONFIGURE AUTHORIZATION POLICIES (cleaned up)
 builder.Services.AddAuthorization(options =>
 {
     // Default policy requires authentication
     options.FallbackPolicy = options.DefaultPolicy;
 
-    // Role-based policies
+    // ROLE-BASED POLICIES (keep only what's used)
     options.AddPolicy("Admin", policy =>
         policy.AddRequirements(new RoleRequirement(new[] { "Admin", "Administrator", "Global Administrator" })));
 
@@ -69,21 +66,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("HR_Access", policy =>
         policy.AddRequirements(new RoleRequirement(new[] { "HR", "Human Resources", "HR Manager" })));
 
-    // Claim-based policies
-    options.AddPolicy("VerifiedUsers", policy =>
-        policy.AddRequirements(new ClaimRequirement("email_verified", "true")));
-
-    // Tenant-specific policy
-    var tenantId = builder.Configuration["AzureAd:TenantId"] ?? "your-tenant-id-here";
-    options.AddPolicy("SpecificTenant", policy =>
-        policy.AddRequirements(new TenantRequirement(tenantId)));
-
-    // Local identity policies
+    // LOCAL IDENTITY POLICIES
     options.AddPolicy("Local_Admin", policy =>
-        policy.RequireRole("Admin"));
+        policy.RequireRole("Admin")); // Uses ASP.NET Identity roles
 
     options.AddPolicy("Local_User", policy =>
-        policy.RequireRole("User", "Admin"));
+        policy.RequireRole("User", "Admin")); // Uses ASP.NET Identity roles
 });
 
 // Add MVC Controllers with Views
@@ -96,7 +84,7 @@ builder.Services.AddLogging(logging =>
     logging.AddDebug();
     if (builder.Environment.IsDevelopment())
     {
-        logging.SetMinimumLevel(LogLevel.Information);
+        logging.SetMinimumLevel(LogLevel.Debug);
     }
 });
 
@@ -113,11 +101,11 @@ using (var scope = app.Services.CreateScope())
     try
     {
         context.Database.EnsureCreated();
+        Console.WriteLine("Database created/verified successfully.");
     }
     catch (Exception ex)
     {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Database creation failed");
+        Console.WriteLine($"Database creation error: {ex.Message}");
     }
 
     // Create roles
@@ -127,6 +115,7 @@ using (var scope = app.Services.CreateScope())
         if (!await roleManager.RoleExistsAsync(role))
         {
             await roleManager.CreateAsync(new IdentityRole(role));
+            Console.WriteLine($"Role '{role}' created.");
         }
     }
 
@@ -148,6 +137,11 @@ using (var scope = app.Services.CreateScope())
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(adminUser, "Admin");
+            Console.WriteLine($"Admin user created and assigned Admin role.");
+        }
+        else
+        {
+            Console.WriteLine($"Error creating admin user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
         }
     }
 }
@@ -166,7 +160,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Enhanced routing
+// ROUTING
 app.MapControllerRoute(
     name: "authorisation_test",
     pattern: "AuthorisationTest/{action=Index}",
@@ -192,9 +186,9 @@ app.MapControllerRoute(
     pattern: "signin",
     defaults: new { controller = "Account", action = "Login" });
 
-// Default route must be last
+// DEFAULT ROUTE MUST BE LAST
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Home}/{action=Index}/{id?}");  
 
 app.Run();
