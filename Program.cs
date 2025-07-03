@@ -7,8 +7,28 @@ using Microsoft.AspNetCore.Authorization;
 using AuthenticationApp.Data;
 using AuthenticationApp.Models;
 using AuthenticationApp.Services;
+using Microsoft.ApplicationInsights.Extensibility;
+using Azure.Identity;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add Application Insights for Azure monitoring
+builder.Services.AddApplicationInsightsTelemetry(builder.Configuration["ApplicationInsights:ConnectionString"]);
+
+// Configure Application Insights with Azure credentials
+builder.Services.Configure<TelemetryConfiguration>(telemetryConfiguration =>
+{
+    // Use DefaultAzureCredential for authentication to Azure
+    telemetryConfiguration.SetAzureTokenCredential(new DefaultAzureCredential());
+});
+
+// Add HTTP Context Accessor for telemetry
+builder.Services.AddHttpContextAccessor();
+
+// Add custom telemetry services
+builder.Services.AddSingleton<ITelemetryInitializer, UserTelemetryInitializer>();
+builder.Services.AddScoped<IUserActivityService, UserActivityService>();
 
 // Register DbContext with connection string
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -25,6 +45,15 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
+    
+    // Lockout settings for security monitoring
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.AllowedForNewUsers = true;
+    
+    // User settings
+    options.User.RequireUniqueEmail = true;
+    options.SignIn.RequireConfirmedEmail = false; // Set to true in production
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
@@ -32,12 +61,37 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 // Authentication with OpenID Connect
 builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
-    .EnableTokenAcquisitionToCallDownstreamApi(new[] { "User.Read" })
+    .EnableTokenAcquisitionToCallDownstreamApi(new[] { 
+        "User.Read", 
+        "Directory.Read.All", 
+        "AuditLog.Read.All" 
+    })
     .AddInMemoryTokenCaches();
 
 builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
 {
     options.TokenValidationParameters.RoleClaimType = "roles";
+    
+    // Add custom event handlers for monitoring
+    options.Events = new OpenIdConnectEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var userActivityService = context.HttpContext.RequestServices.GetRequiredService<IUserActivityService>();
+            var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var email = context.Principal?.FindFirst(ClaimTypes.Email)?.Value;
+            
+            if (!string.IsNullOrEmpty(userId))
+            {
+                userActivityService.TrackUserLogin(userId, email ?? "Unknown", "AzureAD", true);
+            }
+        },
+        OnAuthenticationFailed = async context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("Azure AD authentication failed: {Error}", context.Exception?.Message);
+        }
+    };
 });
 
 // Configure cookie settings
@@ -45,12 +99,27 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/signin";
     options.AccessDeniedPath = "/Account/AccessDenied";
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+    options.SlidingExpiration = true;
+    
+    // Add cookie events for session monitoring
+    options.Events.OnSignedIn = async context =>
+    {
+        var userActivityService = context.HttpContext.RequestServices.GetRequiredService<IUserActivityService>();
+        var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var email = context.Principal?.FindFirst(ClaimTypes.Email)?.Value;
+        
+        if (!string.IsNullOrEmpty(userId))
+        {
+            userActivityService.TrackUserLogin(userId, email ?? "Unknown", "Local", true);
+        }
+    };
 });
 
-// REGISTER ONLY USED AUTHORIsATION HANDLERS
+// REGISTER ONLY USED AUTHORIZATION HANDLERS
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 
-// CONFIGURE AUTHORIZATION POLICIES
+// Configure Authorization Policies
 builder.Services.AddAuthorization(options =>
 {
     // Default policy requires authentication
@@ -77,25 +146,32 @@ builder.Services.AddAuthorization(options =>
 // Add MVC Controllers with Views
 builder.Services.AddControllersWithViews();
 
-// Add logging
+// Enhanced logging with Application Insights
 builder.Services.AddLogging(logging =>
 {
     logging.AddConsole();
     logging.AddDebug();
+    logging.AddApplicationInsights();
+    
     if (builder.Environment.IsDevelopment())
     {
         logging.SetMinimumLevel(LogLevel.Debug);
+    }
+    else
+    {
+        logging.SetMinimumLevel(LogLevel.Information);
     }
 });
 
 var app = builder.Build();
 
-// Create database and seed roles
+// Create database and seed roles with monitoring
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+    var userActivityService = scope.ServiceProvider.GetRequiredService<IUserActivityService>();
 
     // Ensure database is created
     try
@@ -138,6 +214,14 @@ using (var scope = app.Services.CreateScope())
         {
             await userManager.AddToRoleAsync(adminUser, "Admin");
             Console.WriteLine($"Admin user created and assigned Admin role.");
+            
+            // Track admin user creation
+            userActivityService.TrackUserAction(adminUser.Id, "AdminUserCreated", new Dictionary<string, string>
+            {
+                ["Email"] = adminEmail,
+                ["CreatedBy"] = "System",
+                ["Timestamp"] = DateTime.UtcNow.ToString()
+            });
         }
         else
         {
