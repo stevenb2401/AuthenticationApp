@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Test Result</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Authentication Test Result</h1>
+    
+    @if (User?.Identity?.IsAuthenticated == true)
+    {
+        <div class="success">
+            <h2>✅ Authentication Successful!</h2>
+            <p><strong>User:</strong> @User.Identity.Name</p>
+            <p><strong>Authentication Type:</strong> @User.Identity.AuthenticationType</p>
+            
+            <h3>Claims:</h3>
+            <ul>
+                @foreach (var claim in User.Claims)
+                {
+                    <li><strong>@claim.Type:</strong> @claim.Value</li>
+                }
+            </ul>
+        </div>
+    }
+    else
+    {
+        <div class="error">
+            <h2>❌ Authentication Failed</h2>
+            <p>User is not authenticated</p>
+        </div>
+    }
+    
+    <div class="info">
+        <h3>Test Links:</h3>
+        <ul>
+            <li><a href="/test-auth">🧪 Test Authentication Again</a></li>
+            <li><a href="/test-status">📊 Check Status (JSON)</a></li>
+            <li><a href="/test-signout">🚪 Sign Out</a></li>
+            <li><a href="/">🏠 Home</a></li>
+        </ul>
+    </div>
+</body>
+</html>
