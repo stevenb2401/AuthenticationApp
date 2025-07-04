@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CONFIGURATION VALIDATION - Add this early to catch missing settings
+// Confiuration Validation
 var requiredSettings = new[]
 {
     "AzureAd:Instance",
@@ -33,35 +33,36 @@ foreach (var setting in requiredSettings)
     }
 }
 
-// FIXED DATA PROTECTION CONFIGURATION
+// Data Protection Configuration
 builder.Services.AddDataProtection()
     .SetApplicationName("AuthenticationApp")
     .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(
         builder.Environment.ContentRootPath, "DataProtection-Keys")))
     .SetDefaultKeyLifetime(TimeSpan.FromDays(90))
-    .DisableAutomaticKeyGeneration(); // Added for stability
+    .DisableAutomaticKeyGeneration();
 
-// FIXED ANTIFORGERY CONFIGURATION FOR DEVELOPMENT
+// Antiforgery Configuration
 builder.Services.AddAntiforgery(options =>
 {
     options.Cookie.SameSite = SameSiteMode.None;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // Fixed: Never doesn't exist
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
-// Add Application Insights for Azure monitoring
-builder.Services.AddApplicationInsightsTelemetry(builder.Configuration["ApplicationInsights:ConnectionString"]);
+// Application Insights Configuration for Azure
+builder.Services.AddApplicationInsightsTelemetry(options =>
+{
+    options.ConnectionString = "your-connection-string";
+});
 
-// Configure Application Insights with Azure credentials
 builder.Services.Configure<TelemetryConfiguration>(telemetryConfiguration =>
 {
-    // Use DefaultAzureCredential for authentication to Azure
     telemetryConfiguration.SetAzureTokenCredential(new DefaultAzureCredential());
 });
 
-// Add HTTP Context Accessor for telemetry
+// HttpContext Accessor
 builder.Services.AddHttpContextAccessor();
 
-// Add custom telemetry services
+// Telemetry Initialiser
 builder.Services.AddSingleton<ITelemetryInitializer, UserTelemetryInitializer>();
 builder.Services.AddScoped<IUserActivityService, UserActivityService>();
 
@@ -71,39 +72,39 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."),
     sqlOptions => sqlOptions.EnableRetryOnFailure()));
 
-// ENHANCED IDENTITY SERVICES with stronger security
+// Identity Services Configuration
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
-    // Enhanced password policy
+    // Password Policy
     options.Password.RequireDigit = true;
-    options.Password.RequiredLength = 12; // Increased from 8
-    options.Password.RequireNonAlphanumeric = true; // Changed from false
+    options.Password.RequiredLength = 12; 
+    options.Password.RequireNonAlphanumeric = true; 
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
-    options.Password.RequiredUniqueChars = 6; // New requirement
+    options.Password.RequiredUniqueChars = 6; 
     
-    // Enhanced lockout settings for better security
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15); // Increased from 5
-    options.Lockout.MaxFailedAccessAttempts = 3; // Decreased from 5 for security
+    // Lockout Settings
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15); 
+    options.Lockout.MaxFailedAccessAttempts = 3;
     options.Lockout.AllowedForNewUsers = true;
     
-    // User settings
+    // User Settings
     options.User.RequireUniqueEmail = true;
     
     // Environment-specific email confirmation
     if (builder.Environment.IsProduction())
     {
-        options.SignIn.RequireConfirmedEmail = true; // Required in production
+        options.SignIn.RequireConfirmedEmail = true; 
     }
     else
     {
-        options.SignIn.RequireConfirmedEmail = false; // Allow for development
+        options.SignIn.RequireConfirmedEmail = false;
     }
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// CONFIGURE IDENTITY'S COOKIE OPTIONS after AddIdentity
+// Cookie Authentication Configuration
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
@@ -111,13 +112,12 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
     options.SlidingExpiration = true;
     
-    // FIXED COOKIE SETTINGS FOR DEVELOPMENT
+    // Cookie Settings
     options.Cookie.HttpOnly = true;
     options.Cookie.Name = "AuthApp.Auth";
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     options.Cookie.SameSite = SameSiteMode.None;
     
-    // Enhanced validation with proper null checking
     options.Events.OnValidatePrincipal = async context =>
     {
         var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
@@ -161,17 +161,19 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
-// FIXED AUTHENTICATION CONFIGURATION - Let Identity handle its own scheme
+// Authentication Configuration
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = IdentityConstants.ApplicationScheme; // Use Identity's default scheme
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
     options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
-    options.DefaultSignInScheme = IdentityConstants.ApplicationScheme; // Use Identity's default scheme
+    options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
 })
-// Don't manually add the Identity.Application cookie scheme - AddIdentity() already does this
+
+// OpenID Connect Configuration
+
 .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
 {
-    // Get Azure AD configuration values
+    // Load Azure AD settings from configuration
     var azureAdSection = builder.Configuration.GetSection("AzureAd");
     var instance = azureAdSection["Instance"];
     var tenantId = azureAdSection["TenantId"];
@@ -179,38 +181,37 @@ builder.Services.AddAuthentication(options =>
     var clientSecret = azureAdSection["ClientSecret"];
     
     // Basic OpenID Connect settings
-    options.Authority = $"{instance?.TrimEnd('/')}/{tenantId}/v2.0";
+    options.Authority = $"{instance.TrimEnd('/')}/{tenantId}/v2.0";
     options.ClientId = clientId;
     options.ClientSecret = clientSecret;
     options.CallbackPath = "/signin-oidc";
     options.SignedOutCallbackPath = "/signout-oidc";
-    options.SignInScheme = IdentityConstants.ApplicationScheme; // Use Identity's scheme
+    options.SignInScheme = IdentityConstants.ApplicationScheme;
     options.ResponseType = "code";
     options.SaveTokens = true;
     options.GetClaimsFromUserInfoEndpoint = true;
     options.UsePkce = true;
     
-    // CRITICAL FIX: Disable problematic validations for development
-    options.ProtocolValidator.RequireStateValidation = false; // Disable state validation
+    // Configure OpenID Connect options
+    options.ProtocolValidator.RequireStateValidation = false;
     options.ProtocolValidator.RequireNonce = false;
     options.RequireHttpsMetadata = false;
     
-    // CRITICAL FIX: Simplified correlation cookie settings for development
     options.CorrelationCookie.SameSite = SameSiteMode.None;
-    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // Fixed: Never doesn't exist
-    options.CorrelationCookie.HttpOnly = false; // Temporarily disable for debugging
+    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.CorrelationCookie.HttpOnly = false; 
     options.CorrelationCookie.IsEssential = true;
     options.CorrelationCookie.Path = "/";
     options.CorrelationCookie.Domain = null;
-    options.CorrelationCookie.Name = "AzureAD.Correlation"; // Custom name for debugging
+    options.CorrelationCookie.Name = "AzureAD.Correlation"; 
     
     options.NonceCookie.SameSite = SameSiteMode.None;
-    options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // Fixed: Never doesn't exist
+    options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     options.NonceCookie.HttpOnly = false;
     options.NonceCookie.IsEssential = true;
     options.NonceCookie.Path = "/";
     options.NonceCookie.Domain = null;
-    options.NonceCookie.Name = "AzureAD.Nonce"; // Custom name for debugging
+    options.NonceCookie.Name = "AzureAD.Nonce"; 
     
     // Configure scopes
     options.Scope.Clear();
@@ -222,10 +223,10 @@ builder.Services.AddAuthentication(options =>
     // Configure token validation
     options.TokenValidationParameters.RoleClaimType = "roles";
     options.TokenValidationParameters.NameClaimType = "name";
-    options.TokenValidationParameters.ValidateIssuer = false; // Disable for development
+    options.TokenValidationParameters.ValidateIssuer = false; 
     options.TokenValidationParameters.ClockSkew = TimeSpan.FromMinutes(5);
     
-    // SIMPLIFIED EVENT HANDLERS - Focus on core functionality
+    // Event Handlers for OpenID Connect
     options.Events = new OpenIdConnectEvents
     {
         OnRedirectToIdentityProvider = context =>
@@ -235,7 +236,6 @@ builder.Services.AddAuthentication(options =>
             logger.LogInformation("Client ID: {ClientId}", context.Options.ClientId);
             logger.LogInformation("Callback Path: {CallbackPath}", context.Options.CallbackPath);
             
-            // Clear any existing authentication
             context.HttpContext.Response.Cookies.Delete("AzureAD.Correlation");
             context.HttpContext.Response.Cookies.Delete("AzureAD.Nonce");
             
@@ -247,7 +247,7 @@ builder.Services.AddAuthentication(options =>
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Message received from Azure AD");
             
-            // Log available cookies for debugging
+            // Log Azure AD correlation cookies
             var correlationCookies = context.Request.Cookies.Where(c => c.Key.Contains("Correlation")).ToList();
             logger.LogInformation("Correlation cookies found: {Count}", correlationCookies.Count);
             foreach (var cookie in correlationCookies)
@@ -323,7 +323,7 @@ builder.Services.AddAuthentication(options =>
                     {
                         logger.LogInformation("Found existing local user for Azure AD account: {Email}", email);
                     }
-                    
+
                     // Add role claims
                     var identity = context.Principal.Identity as ClaimsIdentity;
                     if (identity != null && existingUser != null)
@@ -333,15 +333,15 @@ builder.Services.AddAuthentication(options =>
                         {
                             identity.RemoveClaim(claim);
                         }
-                        
+
                         var userRoles = await userManager.GetRolesAsync(existingUser);
                         foreach (var role in userRoles)
                         {
                             identity.AddClaim(new Claim(ClaimTypes.Role, role));
                         }
-                        
+
                         identity.AddClaim(new Claim("LocalUserId", existingUser.Id));
-                        
+
                         logger.LogInformation("Added local roles for {Email}: {Roles}", email, string.Join(", ", userRoles));
                     }
                 }
@@ -399,19 +399,13 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// REGISTER AUTHORIZATION HANDLERS
+// Authorisation Handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 
-// AUTHORIZATION POLICIES - FIXED SYNTAX ERRORS
+// Authorisation Policies
 builder.Services.AddAuthorization(options =>
 {
-    // TEMPORARILY DISABLE fallback policy to stop authentication loop
-    // TODO: Re-enable after fixing the root cause
-    // options.FallbackPolicy = new AuthorizationPolicyBuilder()
-    //     .RequireAuthenticatedUser()
-    //     .Build();
-
-    // ROLE-BASED POLICIES with clear naming
+    // Role-Based Policies
     options.AddPolicy("RequireAdminRole", policy =>
         policy.RequireRole("Admin", "Administrator", "Global Administrator"));
 
@@ -421,14 +415,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireHRAccess", policy =>
         policy.RequireRole("HR", "Human Resources", "HR Manager"));
 
-    // LOCAL IDENTITY POLICIES
     options.AddPolicy("RequireLocalAdmin", policy =>
         policy.RequireRole("Admin")); 
 
     options.AddPolicy("RequireLocalUser", policy =>
         policy.RequireRole("User", "Admin"));
 
-    // MISSING POLICIES THAT WERE CAUSING ERRORS
     options.AddPolicy("Admin", policy =>
         policy.RequireRole("Admin", "Administrator", "Global Administrator"));
 
@@ -444,7 +436,6 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Local_User", policy =>
         policy.RequireRole("User", "Admin"));
         
-    // COMBINED POLICIES for flexibility
     options.AddPolicy("RequireAnyAdmin", policy =>
         policy.RequireAssertion(context =>
             context.User.IsInRole("Admin") || 
@@ -452,13 +443,13 @@ builder.Services.AddAuthorization(options =>
             context.User.IsInRole("Global Administrator")));
 });
 
-// Add MVC Controllers with Views
+// MVC Controllers with Views
 builder.Services.AddControllersWithViews();
 
-// ENHANCED LOGGING with structured logging
+// Logging Configuration
 builder.Services.AddLogging(logging =>
 {
-    logging.ClearProviders(); // Start fresh
+    logging.ClearProviders(); 
     logging.AddConsole();
     logging.AddDebug();
     
@@ -467,7 +458,7 @@ builder.Services.AddLogging(logging =>
         logging.AddApplicationInsights();
     }
     
-    // Add specific filters for authentication/authorization - SET TO TRACE for maximum detail
+    // Set specific log levels for different namespaces
     logging.AddFilter("Microsoft.AspNetCore.Authentication", LogLevel.Trace);
     logging.AddFilter("Microsoft.AspNetCore.Authentication.OpenIdConnect", LogLevel.Trace);
     logging.AddFilter("Microsoft.AspNetCore.Authentication.Cookies", LogLevel.Trace);
@@ -475,7 +466,7 @@ builder.Services.AddLogging(logging =>
     
     if (builder.Environment.IsDevelopment())
     {
-        logging.SetMinimumLevel(LogLevel.Trace); // Set to TRACE
+        logging.SetMinimumLevel(LogLevel.Trace); 
     }
     else
     {
@@ -485,10 +476,10 @@ builder.Services.AddLogging(logging =>
 
 var app = builder.Build();
 
-// DATABASE INITIALIZATION
+// Database Initialisation
 await InitializeDatabaseAsync(app.Services);
 
-// ENHANCED MIDDLEWARE PIPELINE with security headers
+// Middleware Configuration
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -498,15 +489,12 @@ else
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
     
-    // Add security headers for production
     app.Use(async (context, next) =>
     {
         context.Response.Headers["X-Frame-Options"] = "DENY";
         context.Response.Headers["X-Content-Type-Options"] = "nosniff";
         context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
         context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
-        
-        // Add Content Security Policy
         context.Response.Headers["Content-Security-Policy"] = 
             "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;";
         
@@ -517,31 +505,30 @@ else
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-// FIXED: Enhanced middleware to clear corrupted authentication state
+// Custom Middleware for Authentication Error Handling
 app.Use(async (context, next) =>
 {
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    
-    // If we detect authentication errors in query string, clear auth cookies
-    if (context.Request.Query.ContainsKey("error") && 
+
+    if (context.Request.Query.ContainsKey("error") &&
         (context.Request.Query["error"] == "auth_failed" || context.Request.Query["error"] == "azure_auth_failed"))
     {
         logger.LogInformation("Clearing authentication cookies due to error");
-        
+
         // Clear ALL possible authentication cookies
         var cookiesToClear = new[]
         {
             "AzureAD.Correlation",
-            "AzureAD.Nonce", 
+            "AzureAD.Nonce",
             ".AspNetCore.OpenIdConnect.Nonce.CookieAuth",
-            ".AspNetCore.OpenIdConnect.Nonce.OpenIdConnect", 
+            ".AspNetCore.OpenIdConnect.Nonce.OpenIdConnect",
             ".AspNetCore.Correlation.OpenIdConnect",
             ".AspNetCore.Correlation.CookieAuth",
             "AuthApp.Auth",
-            ".AspNetCore.Identity.Application", // This is the key one
+            ".AspNetCore.Identity.Application",
             ".AspNetCore.Antiforgery"
         };
-        
+
         foreach (var cookie in cookiesToClear)
         {
             if (context.Request.Cookies.ContainsKey(cookie))
@@ -556,7 +543,7 @@ app.Use(async (context, next) =>
                 });
             }
         }
-        
+
         // Redirect to clean URL
         if (context.Request.Path == "/" && context.Request.Query.Count > 0)
         {
@@ -564,26 +551,24 @@ app.Use(async (context, next) =>
             return;
         }
     }
-    
-    // Enhanced callback processing
+
+    // Callback Processing
     if (context.Request.Path == "/signin-oidc" && context.Request.Method == "POST")
     {
         logger.LogInformation("Processing Azure AD callback");
-        
-        // Check for correlation cookies
+
         var hasCorrelationCookie = context.Request.Cookies.Keys
             .Any(k => k.Contains("Correlation"));
-            
+
         if (!hasCorrelationCookie)
         {
             logger.LogWarning("No correlation cookie found for callback - this might cause correlation failure");
         }
     }
-    
+
     await next();
 });
 
-// DEBUGGING: Add request logging middleware to track authentication state
 app.Use(async (context, next) =>
 {
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
@@ -603,7 +588,7 @@ app.UseRouting();
 
 app.UseAuthentication();
 
-// Additional debugging middleware after authentication
+// Custom Middleware for Authentication Error Handling
 app.Use(async (context, next) =>
 {
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
@@ -614,7 +599,6 @@ app.Use(async (context, next) =>
             context.Request.Method, context.Request.Path);
         logger.LogInformation("Authentication result: {IsAuth}", context.User?.Identity?.IsAuthenticated);
         
-        // If this is a POST and we're still not authenticated, something went wrong
         if (context.Request.Method == "POST" && context.User?.Identity?.IsAuthenticated != true)
         {
             logger.LogWarning("POST to /signin-oidc but still not authenticated");
@@ -626,7 +610,7 @@ app.Use(async (context, next) =>
 
 app.UseAuthorization();
 
-// ROUTING
+// Route Configuration
 app.MapControllerRoute(
     name: "authorisation_test",
     pattern: "AuthorisationTest/{action=Index}",
@@ -652,20 +636,19 @@ app.MapControllerRoute(
     pattern: "signin",
     defaults: new { controller = "Account", action = "Login" });
 
-// Azure AD sign-in route
 app.MapControllerRoute(
     name: "azure_signin",
     pattern: "signin-azure",
     defaults: new { controller = "Account", action = "ExternalLogin", provider = "OpenIdConnect" });
 
-// DEFAULT ROUTE MUST BE LAST
+// Default Route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
 
-// SEPARATE DATABASE INITIALIZATION METHOD
+// Seperate Database Initialisation Method
 static async Task InitializeDatabaseAsync(IServiceProvider services)
 {
     using var scope = services.CreateScope();
@@ -677,11 +660,9 @@ static async Task InitializeDatabaseAsync(IServiceProvider services)
 
     try
     {
-        // Ensure database is created
         await context.Database.EnsureCreatedAsync();
         logger.LogInformation("Database created/verified successfully.");
 
-        // Create roles
         string[] roles = { "Admin", "User", "Manager", "HR", "HR Manager" };
         foreach (var role in roles)
         {
@@ -692,7 +673,7 @@ static async Task InitializeDatabaseAsync(IServiceProvider services)
             }
         }
 
-        // Create admin user
+        // Seeded Admin User
         string adminEmail = "stevenbyrne243@gmail.com";
         string adminPassword = "ComplexP@ssw0rd123!";
 
@@ -711,8 +692,7 @@ static async Task InitializeDatabaseAsync(IServiceProvider services)
             {
                 await userManager.AddToRoleAsync(adminUser, "Admin");
                 logger.LogInformation("Admin user created and assigned Admin role.");
-                
-                // Track admin user creation
+
                 userActivityService.TrackUserAction(adminUser.Id, "AdminUserCreated", new Dictionary<string, string>
                 {
                     ["Email"] = adminEmail,
@@ -722,7 +702,7 @@ static async Task InitializeDatabaseAsync(IServiceProvider services)
             }
             else
             {
-                logger.LogError("Error creating admin user: {Errors}", 
+                logger.LogError("Error creating admin user: {Errors}",
                     string.Join(", ", result.Errors.Select(e => e.Description)));
             }
         }
@@ -733,3 +713,4 @@ static async Task InitializeDatabaseAsync(IServiceProvider services)
         throw;
     }
 }
+    public partial class Program { }

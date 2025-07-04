@@ -18,9 +18,9 @@ namespace Authentication_App.Controllers
             _roleManager = roleManager;
         }
 
-        // GET method for rendering the Create User form
+        // GET method for Creating a new user
         [HttpGet]
-        [Authorize(Roles = "Admin")] // Only admins can create users
+        [Authorize(Roles = "Admin")] 
         public IActionResult CreateUser()
         {
             return View(new CreateUserViewModel());
@@ -28,12 +28,12 @@ namespace Authentication_App.Controllers
 
         // POST method for handling Create User form submission
         [HttpPost]
-        [Authorize(Roles = "Admin")] // Only admins can create users
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateUser(CreateUserViewModel model)
         {
             if (!ModelState.IsValid)
             {
-                return View(model); // Returns the form if there are any validation errors
+                return View(model); 
             }
 
             var user = new IdentityUser
@@ -53,7 +53,7 @@ namespace Authentication_App.Controllers
                 }
 
                 TempData["SuccessMessage"] = $"User {model.DisplayName} ({model.Email}) created successfully!";
-                return RedirectToAction("UserList"); // Redirect to the User List page
+                return RedirectToAction("UserList"); 
             }
 
             foreach (var error in result.Errors)
@@ -65,14 +65,14 @@ namespace Authentication_App.Controllers
         }
 
         // GET method for displaying the User List
-        [Authorize(Roles = "Admin")] // Only admins can view user list
+        [Authorize(Roles = "Admin")] 
         public IActionResult UserList()
         {
             var users = _userManager.Users.ToList();
-            return View(users); // Pass the list of users to the UserList view
+            return View(users); 
         }
 
-        // GET method for rendering the Edit User form
+        // GET method for the Edit User form
         [HttpGet]
         public async Task<IActionResult> EditUser(string id)
         {
@@ -89,15 +89,14 @@ namespace Authentication_App.Controllers
 
             var currentUser = await _userManager.GetUserAsync(User);
             
-            // Check if user is admin OR editing their own profile
+            // Check if user is admin or editing their own profile
             if (!User.IsInRole("Admin") && currentUser?.Id != id)
             {
-                return Forbid(); // Not admin and not own profile
+                return Forbid(); 
             }
 
             var userRoles = await _userManager.GetRolesAsync(user);
 
-            // Get the user's primary role
             var primaryRole = userRoles.FirstOrDefault() ?? string.Empty;
 
             var model = new EditUserViewModel
@@ -125,7 +124,6 @@ namespace Authentication_App.Controllers
         {
             if (!ModelState.IsValid)
             {
-                // Reload available roles if validation fails
                 model.AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" };
                 return View(model);
             }
@@ -138,13 +136,12 @@ namespace Authentication_App.Controllers
 
             var currentUser = await _userManager.GetUserAsync(User);
             
-            // Check if user is admin OR editing their own profile
+            // Check if user is admin or editing their own profile
             if (!User.IsInRole("Admin") && currentUser?.Id != model.Id)
             {
-                return Forbid(); // Not admin and not own profile
+                return Forbid();
             }
 
-            // Update basic user properties
             user.UserName = model.UserName;
             user.PhoneNumber = model.PhoneNumber;
             
@@ -181,16 +178,13 @@ namespace Authentication_App.Controllers
                 {
                     var currentRoles = await _userManager.GetRolesAsync(user);
                     
-                    // Only change roles if the new role is different from current roles
                     if (!currentRoles.Contains(model.Role))
                     {
-                        // Remove all current roles
                         if (currentRoles.Any())
                         {
                             await _userManager.RemoveFromRolesAsync(user, currentRoles);
                         }
                         
-                        // Add the new primary role
                         await _userManager.AddToRoleAsync(user, model.Role);
                         Console.WriteLine($"Role updated: {model.Role} for user {user.UserName}");
                     }
@@ -206,11 +200,11 @@ namespace Authentication_App.Controllers
                 }
                 else
                 {
-                    return RedirectToAction("Index", "Profile"); // Regular users go back to profile
+                    return RedirectToAction("Index", "Profile");
                 }
             }
             
-            // If we got this far, something failed
+            // If update fails, add errors to ModelState
             foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
@@ -224,14 +218,14 @@ namespace Authentication_App.Controllers
 
         // POST method for handling user deletion 
         [HttpPost]
-        [Authorize(Roles = "Admin")] // Only admins can delete users 
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
             {
                 TempData["ErrorMessage"] = "User not found.";
-                return RedirectToAction("UserList"); // Redirect back to User List
+                return RedirectToAction("UserList"); 
             }
 
             var result = await _userManager.DeleteAsync(user);
@@ -244,7 +238,7 @@ namespace Authentication_App.Controllers
                 TempData["ErrorMessage"] = "Failed to delete user.";
             }
 
-            return RedirectToAction("UserList"); // Redirect to the User List page
+            return RedirectToAction("UserList");
         }
     }
 }

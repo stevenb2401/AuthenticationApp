@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AuthenticationApp.Models
 {
-    /// View model for creating a new user
+    // View model for creating a new user
     public class CreateUserViewModel
     {
         [Required(ErrorMessage = "Email is required")]
@@ -54,7 +54,7 @@ namespace AuthenticationApp.Models
         public List<RoleSelectionViewModel> AvailableRoles { get; set; } = new List<RoleSelectionViewModel>();
     }
 
-    /// View model for editing an existing user
+    // View model for editing an existing user
     public class EditUserViewModel
     {
         public string Id { get; set; } = string.Empty;
@@ -126,7 +126,7 @@ namespace AuthenticationApp.Models
         }
     }
 
-    /// View model for password reset
+    // View model for password reset
     public class ResetPasswordViewModel
     {
         public string UserId { get; set; } = string.Empty;
@@ -152,7 +152,7 @@ namespace AuthenticationApp.Models
         public bool SendEmailNotification { get; set; } = true;
     }
 
-    /// View model for user search and filtering
+    // View model for user search and filtering
     public class UserSearchViewModel
     {
         [Display(Name = "Search Term")]
@@ -181,7 +181,7 @@ namespace AuthenticationApp.Models
         public int TotalPages => (int)Math.Ceiling((double)TotalResults / PageSize);
     }
 
-    /// View model for user search results
+    // View model for user search results
     public class UserSearchResultViewModel
     {
         public string Id { get; set; } = string.Empty;
@@ -200,7 +200,7 @@ namespace AuthenticationApp.Models
         public string AccountStatusBadgeClass => IsLockedOut ? "bg-danger" : IsEnabled ? "bg-success" : "bg-secondary";
     }
 
-    /// Enum for user account status filtering
+    // Enum for user account status filtering
     public enum UserAccountStatus
     {
         All = 0,
@@ -210,7 +210,7 @@ namespace AuthenticationApp.Models
         Unverified = 4
     }
 
-    /// View model for role selection
+    // View model for role selection
     public class RoleSelectionViewModel
     {
         public string RoleId { get; set; } = string.Empty;

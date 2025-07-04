@@ -25,7 +25,11 @@ namespace AuthenticationApp.Models
         {
             StartTime = startTime;
             EndTime = endTime;
-            AllowedDays = allowedDays ?? new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday };
+            
+            // Check for both null AND empty array
+            AllowedDays = (allowedDays == null || allowedDays.Length == 0)
+                ? new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday }
+                : allowedDays;
         }
     }
 

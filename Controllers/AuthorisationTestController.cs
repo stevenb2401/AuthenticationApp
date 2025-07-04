@@ -15,7 +15,7 @@ namespace AuthenticationApp.Controllers
             _authorizationService = authorizationService;
         }
 
-        /// Authorisation test dashboard
+        // Authorisation test dashboard
         public async Task<IActionResult> Index()
         {
             _logger.LogInformation("Authorisation test dashboard accessed by user: {User}", User.Identity?.Name);
@@ -100,7 +100,7 @@ namespace AuthenticationApp.Controllers
             }
         }
 
-        /// Shows detailed user claims for debugging
+        // Shows detailed user claims for debugging
         public IActionResult UserInfo()
         {
             var userInfo = new
@@ -125,7 +125,7 @@ namespace AuthenticationApp.Controllers
             return View();
         }
 
-        /// Helper method to check if current time is within business hours
+        // Helper method to check if current time is within business hours
         private bool IsCurrentlyBusinessHours()
         {
             var now = DateTime.Now;
@@ -133,15 +133,15 @@ namespace AuthenticationApp.Controllers
             var currentDay = now.DayOfWeek;
 
             var businessDays = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday };
-            var startTime = new TimeSpan(9, 0, 0); // 9:00 AM
-            var endTime = new TimeSpan(17, 0, 0);  // 5:00 PM
+            var startTime = new TimeSpan(9, 0, 0); 
+            var endTime = new TimeSpan(17, 0, 0); 
 
             return businessDays.Contains(currentDay) &&
                    currentTime >= startTime &&
                    currentTime <= endTime;
         }
 
-        /// API endpoint to check authorisation for a specific policy
+        // API endpoint to check authorisation for a specific policy
         [HttpGet]
         public async Task<IActionResult> CheckPolicy(string policy)
         {

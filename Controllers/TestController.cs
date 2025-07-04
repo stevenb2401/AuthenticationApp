@@ -18,7 +18,7 @@ namespace AuthenticationApp.Controllers
         [HttpGet("/test-auth")]
         public IActionResult TestAuth()
         {
-            _logger.LogInformation("🧪 Test auth endpoint called");
+            _logger.LogInformation("Test auth endpoint called");
             
             var props = new AuthenticationProperties
             {
@@ -26,23 +26,25 @@ namespace AuthenticationApp.Controllers
                 Items = { { "scheme", OpenIdConnectDefaults.AuthenticationScheme } }
             };
 
-            _logger.LogInformation("🚀 Challenging with OpenIdConnect scheme");
+            _logger.LogInformation("Challenging with OpenIdConnect scheme");
             return Challenge(props, OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         [HttpGet("/test-callback")]
         public async Task<IActionResult> TestCallback()
         {
-            _logger.LogInformation("🎯 Test callback reached");
-            _logger.LogInformation("🔐 Is authenticated: {IsAuth}", User?.Identity?.IsAuthenticated);
-            _logger.LogInformation("👤 User: {User}", User?.Identity?.Name);
+            await Task.CompletedTask;
             
+            _logger.LogInformation("Test callback reached");
+            _logger.LogInformation("Is authenticated: {IsAuth}", User?.Identity?.IsAuthenticated);
+            _logger.LogInformation("User: {User}", User?.Identity?.Name);
+
             // Log all claims
             if (User?.Identity?.IsAuthenticated == true)
             {
                 foreach (var claim in User.Claims)
                 {
-                    _logger.LogInformation("🏷️ Claim: {Type} = {Value}", claim.Type, claim.Value);
+                    _logger.LogInformation("Claim: {Type} = {Value}", claim.Type, claim.Value);
                 }
             }
 
@@ -52,7 +54,7 @@ namespace AuthenticationApp.Controllers
         [HttpGet("/test-signout")]
         public async Task<IActionResult> TestSignout()
         {
-            _logger.LogInformation("🚪 Test signout called");
+            _logger.LogInformation("Test signout called");
             
             await HttpContext.SignOutAsync();
             return RedirectToAction("Index", "Home");

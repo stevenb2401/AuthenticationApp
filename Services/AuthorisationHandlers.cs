@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Identity;
 
 namespace AuthenticationApp.Services
 {
-    /// Handler for role-based authorization that checks both Azure AD claims and local Identity roles
     public class RoleAuthorizationHandler : AuthorizationHandler<RoleRequirement>
     {
         private readonly ILogger<RoleAuthorizationHandler> _logger;
@@ -21,7 +20,6 @@ namespace AuthenticationApp.Services
         {
             try
             {
-                // Get Azure AD roles from claims
                 var azureAdRoles = context.User.FindAll("roles")
                     .Union(context.User.FindAll(ClaimTypes.Role))
                     .Union(context.User.FindAll("groups"))
@@ -30,7 +28,6 @@ namespace AuthenticationApp.Services
 
                 _logger.LogDebug("Azure AD roles from claims: {AzureAdRoles}", string.Join(", ", azureAdRoles));
 
-                // Get local Identity roles
                 var localRoles = new List<string>();
                 var userEmail = context.User.FindFirst(ClaimTypes.Email)?.Value ?? 
                                context.User.FindFirst("preferred_username")?.Value;
@@ -64,7 +61,6 @@ namespace AuthenticationApp.Services
                     _logger.LogWarning("No email claim found in user context");
                 }
 
-                // Combine all roles
                 var allUserRoles = azureAdRoles.Union(localRoles).Distinct().ToList();
 
                 _logger.LogDebug("Combined user roles: {UserRoles}, Required: {RequiredRoles}", 
@@ -72,11 +68,10 @@ namespace AuthenticationApp.Services
 
                 if (requirement.RequireAllRoles)
                 {
-                    // User must have ALL required roles
                     if (requirement.RequiredRoles.All(role => allUserRoles.Contains(role, StringComparer.OrdinalIgnoreCase)))
                     {
                         context.Succeed(requirement);
-                        _logger.LogInformation("User authorized: has all required roles");
+                        _logger.LogInformation("User authorised: has all required roles");
                         return;
                     }
                     else
@@ -86,11 +81,10 @@ namespace AuthenticationApp.Services
                 }
                 else
                 {
-                    // User must have AT LEAST ONE required role
                     if (requirement.RequiredRoles.Any(role => allUserRoles.Contains(role, StringComparer.OrdinalIgnoreCase)))
                     {
                         context.Succeed(requirement);
-                        _logger.LogInformation("User authorized: has at least one required role");
+                        _logger.LogInformation("User authorised: has at least one required role");
                         return;
                     }
                     else
@@ -101,10 +95,9 @@ namespace AuthenticationApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in role authorization handler");
+                _logger.LogError(ex, "Error in role authorisation handler");
             }
 
-            // If we get here, authorization failed
             context.Fail();
         }
     }

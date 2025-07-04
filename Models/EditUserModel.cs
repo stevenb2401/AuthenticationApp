@@ -33,18 +33,15 @@ namespace Authentication_App.Models
         [Display(Name = "Lockout End Date")]
         public DateTimeOffset? LockoutEnd { get; set; }
 
-        // Additional role management
         [Display(Name = "All User Roles")]
         public List<string> CurrentRoles { get; set; } = new List<string>();
         
         public List<string> AvailableRoles { get; set; } = new List<string>();
 
-        // Read-only information for display
         public DateTime? CreatedDate { get; set; }
         public DateTime? LastLoginDate { get; set; }
         public bool IsCurrentUser { get; set; }
 
-        // Security timestamp for concurrency
         public string? SecurityStamp { get; set; }
     }
 }

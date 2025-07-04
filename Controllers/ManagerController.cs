@@ -37,8 +37,8 @@ namespace AuthenticationApp.Controllers
                     .Select(u => new UserSummaryViewModel
                     {
                         Id = u.Id,
-                        UserName = u.UserName,
-                        Email = u.Email,
+                        UserName = u.UserName ?? string.Empty,
+                        Email = u.Email ?? string.Empty,
                         EmailConfirmed = u.EmailConfirmed,
                         LockoutEnabled = u.LockoutEnabled
                     })
@@ -49,8 +49,8 @@ namespace AuthenticationApp.Controllers
             var roles = await _roleManager.Roles.ToListAsync();
             foreach (var role in roles)
             {
-                var usersInRole = await _userManager.GetUsersInRoleAsync(role.Name!);
-                model.RoleDistribution.Add(role.Name!, usersInRole.Count);
+                var usersInRole = await _userManager.GetUsersInRoleAsync(role.Name ?? string.Empty);
+                model.RoleDistribution.Add(role.Name ?? string.Empty, usersInRole.Count);
             }
 
             return View(model);
@@ -68,8 +68,8 @@ namespace AuthenticationApp.Controllers
                 userViewModels.Add(new TeamMemberViewModel
                 {
                     Id = user.Id,
-                    UserName = user.UserName,
-                    Email = user.Email,
+                    UserName = user.UserName ?? string.Empty,
+                    Email = user.Email ?? string.Empty,
                     EmailConfirmed = user.EmailConfirmed,
                     IsLockedOut = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.Now,
                     Roles = roles.ToList()
@@ -94,15 +94,15 @@ namespace AuthenticationApp.Controllers
             }
 
             var userRoles = await _userManager.GetRolesAsync(user);
-            var allRoles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
+            var allRoles = await _roleManager.Roles.Select(r => r.Name ?? string.Empty).ToListAsync();
 
             var model = new UserRoleManagementViewModel
             {
                 UserId = user.Id,
-                UserName = user.UserName,
-                Email = user.Email,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
                 CurrentRoles = userRoles.ToList(),
-                AvailableRoles = allRoles!
+                AvailableRoles = allRoles
             };
 
             return View(model);

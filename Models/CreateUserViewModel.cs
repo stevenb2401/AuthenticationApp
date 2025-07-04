@@ -24,7 +24,6 @@ namespace Authentication_App.Models
         [Display(Name = "Role")]
         public string Role { get; set; } = string.Empty;
 
-        // Profile information
         [Required(ErrorMessage = "Display Name is required.")]
         [Display(Name = "Display Name")]
         [StringLength(100, ErrorMessage = "Display name cannot exceed 100 characters")]
@@ -34,7 +33,6 @@ namespace Authentication_App.Models
         [Display(Name = "Phone Number")]
         public string? PhoneNumber { get; set; }
 
-        // Keep the existing property
         public List<string> AvailableRoles { get; set; } = new List<string>();
     }
 }

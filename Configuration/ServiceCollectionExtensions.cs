@@ -3,14 +3,13 @@ using Microsoft.Extensions.Options;
 
 namespace AuthenticationApp.Configuration
 {
-    /// Extension methods for configuring Azure AD with validation
+    // Extension methods for configuring Azure AD with validation
     public static class ServiceCollectionExtensions
     {
         public static IServiceCollection AddAzureAdConfiguration(
             this IServiceCollection services, 
             IConfiguration configuration)
         {
-            // Bind configuration
             var azureAdConfig = new AzureAdConfiguration();
             configuration.GetSection("AzureAd").Bind(azureAdConfig);
 
@@ -25,7 +24,6 @@ namespace AuthenticationApp.Configuration
                     $"Azure AD configuration validation failed: {ex.Message}", ex);
             }
 
-            // Log configuration warnings in development
             var environment = services.BuildServiceProvider()
                 .GetService<IWebHostEnvironment>();
             
@@ -44,11 +42,10 @@ namespace AuthenticationApp.Configuration
                 }
             }
 
-            // Register configuration for dependency injection
             services.Configure<AzureAdConfiguration>(
                 configuration.GetSection("AzureAd"));
 
-            // Register validation service
+
             services.AddSingleton<IValidateOptions<AzureAdConfiguration>, 
                 AzureAdConfigurationValidator>();
 
@@ -56,7 +53,7 @@ namespace AuthenticationApp.Configuration
         }
     }
 
-    /// Validator for Azure AD configuration options
+    // Validator for Azure AD configuration options
     public class AzureAdConfigurationValidator : IValidateOptions<AzureAdConfiguration>
     {
         public ValidateOptionsResult Validate(string? name, AzureAdConfiguration options)

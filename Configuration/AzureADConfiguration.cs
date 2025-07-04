@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AuthenticationApp.Configuration
 {
-    /// Configuration class for Azure Active Directory settings with validation
+    // Configuration class for Azure Active Directory settings with validation
     public class AzureAdConfiguration
     {
         [Required(ErrorMessage = "Azure AD Instance is required")]
@@ -22,7 +22,7 @@ namespace AuthenticationApp.Configuration
             ErrorMessage = "ClientId must be a valid GUID")]
         public string ClientId { get; set; } = string.Empty;
 
-        /// Client secret for confidential client applications
+        // Client secret for confidential client applications
         public string ClientSecret { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "CallbackPath is required")]
@@ -30,7 +30,7 @@ namespace AuthenticationApp.Configuration
 
         public string[] Scopes { get; set; } = { "User.Read" };
 
-        /// Validates the Azure AD configuration
+        // Validates the Azure AD configuration
         /// <exception cref="InvalidOperationException">Thrown when configuration is invalid</exception>
         public void Validate()
         {
@@ -43,13 +43,12 @@ namespace AuthenticationApp.Configuration
                 throw new InvalidOperationException($"Azure AD configuration is invalid: {errors}");
             }
 
-            // Additional custom validation
             ValidateInstanceUrl();
             ValidateDomainFormat();
             ValidateCallbackPath();
         }
 
-        /// Validates that the Instance URL is a Microsoft login endpoint
+        // Validates that the Instance URL is a Microsoft login endpoint
         private void ValidateInstanceUrl()
         {
             if (!Instance.Contains("login.microsoftonline.com", StringComparison.OrdinalIgnoreCase) &&
@@ -62,7 +61,7 @@ namespace AuthenticationApp.Configuration
         }
 
 
-        /// Validates the domain format
+        // Validates the domain format
         private void ValidateDomainFormat()
         {
             if (!string.IsNullOrEmpty(Domain) && !Domain.Contains("."))
@@ -72,7 +71,7 @@ namespace AuthenticationApp.Configuration
             }
         }
 
-        /// Validates the callback path format
+        // Validates the callback path format
         private void ValidateCallbackPath()
         {
             if (!CallbackPath.StartsWith("/"))
@@ -82,7 +81,6 @@ namespace AuthenticationApp.Configuration
             }
         }
 
-        /// Checks if the configuration is ready for production use
         public bool IsProductionReady()
         {
             return !string.IsNullOrEmpty(ClientSecret) &&
@@ -90,8 +88,7 @@ namespace AuthenticationApp.Configuration
                    !Domain.Contains("localhost", StringComparison.OrdinalIgnoreCase);
         }
 
-        /// Gets configuration warnings for development environments
-        /// <returns>List of configuration warnings</returns>
+        // Gets configuration warnings for development environments
         public List<string> GetConfigurationWarnings()
         {
             var warnings = new List<string>();
@@ -119,8 +116,7 @@ namespace AuthenticationApp.Configuration
             return warnings;
         }
 
-        /// Returns a string representation of the configuration (safe for logging)
-        /// <returns>Safe configuration string</returns>
+        // Returns a string representation of the configuration
         public override string ToString()
         {
             return $"AzureAd Config - Domain: {Domain}, " +

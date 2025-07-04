@@ -24,8 +24,8 @@ namespace AuthenticationApp.Controllers
             _logger = logger;
         }
         
-        /// User management dashboard with search and filtering
-        public async Task<IActionResult> Index(UserSearchViewModel model)
+        // User management dashboard with search and filtering
+        public async Task<IActionResult> Index(UserSearchViewModel? model)
         {
             try
             {
@@ -33,17 +33,15 @@ namespace AuthenticationApp.Controllers
                 if (model == null) model = new UserSearchViewModel();
 
                 var query = _userManager.Users.AsQueryable();
-
-                // Apply search filters
+                
                 if (!string.IsNullOrEmpty(model.SearchTerm))
                 {
                     query = query.Where(u =>
-                        u.UserName.Contains(model.SearchTerm) ||
-                        u.Email.Contains(model.SearchTerm) ||
-                        u.PhoneNumber.Contains(model.SearchTerm));
+                         (u.UserName ?? string.Empty).Contains(model.SearchTerm) ||
+                         (u.Email ?? string.Empty).Contains(model.SearchTerm) ||
+                         (u.PhoneNumber ?? string.Empty).Contains(model.SearchTerm));
                 }
 
-                // Apply status filters
                 if (model.AccountStatus.HasValue)
                 {
                     switch (model.AccountStatus.Value)
@@ -76,13 +74,11 @@ namespace AuthenticationApp.Controllers
                 // Get total count for pagination
                 model.TotalResults = await query.CountAsync();
 
-                // Implement pagination
                 var users = await query
                     .Skip((model.CurrentPage - 1) * model.PageSize)
                     .Take(model.PageSize)
                     .ToListAsync();
 
-                // Convert to view models
                 model.Results = new List<UserSearchResultViewModel>();
                 foreach (var user in users)
                 {
@@ -97,14 +93,10 @@ namespace AuthenticationApp.Controllers
                         EmailConfirmed = user.EmailConfirmed,
                         IsLockedOut = user.LockoutEnd > DateTimeOffset.UtcNow,
                         AccessFailedCount = user.AccessFailedCount,
-                        CreatedDate = DateTime.Now, // Would come from audit table in real app
+                        CreatedDate = DateTime.Now, 
                         Roles = userRoles.ToList()
                     });
                 }
-
-                // Populate filter dropdowns
-                model.AvailableRoles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
-                model.AvailableDepartments = new List<string> { "IT", "HR", "Finance", "Marketing", "Operations" };
 
                 _logger.LogInformation("User management dashboard accessed. Found {Count} users", model.TotalResults);
                 return View(model);
@@ -121,6 +113,8 @@ namespace AuthenticationApp.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
+            await Task.CompletedTask;
+            
             var model = new Authentication_App.Models.CreateUserViewModel
             {
                 AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" }
@@ -129,11 +123,16 @@ namespace AuthenticationApp.Controllers
             return View(model);
         }
 
-        /// Create a new user
+        // Create a new user
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Authentication_App.Models.CreateUserViewModel model)
+        public async Task<IActionResult> Create(Authentication_App.Models.CreateUserViewModel? model)
         {
+            if (model == null)
+            {
+                return BadRequest("Invalid model data");
+            }
+
             if (!ModelState.IsValid)
             {
                 model.AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" };
@@ -151,14 +150,13 @@ namespace AuthenticationApp.Controllers
                     return View(model);
                 }
 
-                // Create new user using the updated model structure
                 var user = new IdentityUser
                 {
-                    UserName = model.DisplayName, // Use DisplayName from the updated model
+                    UserName = model.DisplayName, 
                     Email = model.Email,
-                    EmailConfirmed = true, // Default to true for admin-created users
+                    EmailConfirmed = true, 
                     PhoneNumber = model.PhoneNumber,
-                    LockoutEnabled = false // Default to enabled accounts
+                    LockoutEnabled = false
                 };
 
                 var result = await _userManager.CreateAsync(user, model.Password);
@@ -168,7 +166,6 @@ namespace AuthenticationApp.Controllers
                     _logger.LogInformation("New user created: {UserName} by admin: {Admin}", 
                         user.UserName, User.Identity?.Name);
 
-                    // Assign the selected role (single role from the simple dropdown)
                     if (!string.IsNullOrEmpty(model.Role))
                     {
                         await _userManager.AddToRoleAsync(user, model.Role);
@@ -197,9 +194,9 @@ namespace AuthenticationApp.Controllers
             return View(model);
         }
 
-        ///Show user details
+        // Show user details
         [HttpGet]
-        public async Task<IActionResult> Details(string id)
+        public async Task<IActionResult> Details(string? id)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -240,9 +237,9 @@ namespace AuthenticationApp.Controllers
             }
         }
 
-        /// Show edit user form
+        // Show edit user form
         [HttpGet]
-        public async Task<IActionResult> Edit(string id)
+        public async Task<IActionResult> Edit(string? id)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -283,11 +280,16 @@ namespace AuthenticationApp.Controllers
             }
         }
 
-        /// Update user information
+        // Update user information
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Authentication_App.Models.EditUserViewModel model)
+        public async Task<IActionResult> Edit(Authentication_App.Models.EditUserViewModel? model)
         {
+            if (model == null)
+            {
+                return BadRequest("Invalid model data");
+            }
+
             if (!ModelState.IsValid)
             {
                 model.AvailableRoles = new List<string> { "Admin", "User", "Manager", "HR", "HR Manager" };
@@ -302,7 +304,6 @@ namespace AuthenticationApp.Controllers
                     return NotFound();
                 }
 
-                // Update user properties
                 user.UserName = model.UserName;
                 user.Email = model.Email;
                 user.PhoneNumber = model.PhoneNumber;
@@ -315,10 +316,8 @@ namespace AuthenticationApp.Controllers
                     _logger.LogInformation("User {UserName} updated by admin {Admin}", 
                         user.UserName, User.Identity?.Name);
 
-                    // Update roles
                     var currentRoles = await _userManager.GetRolesAsync(user);
                     
-                    // Remove all current roles if a new role is specified
                     if (!string.IsNullOrEmpty(model.Role) && !currentRoles.Contains(model.Role))
                     {
                         if (currentRoles.Any())
@@ -352,9 +351,9 @@ namespace AuthenticationApp.Controllers
             return View(model);
         }
 
-        /// Show password reset form
+        // Show password reset form
         [HttpGet]
-        public async Task<IActionResult> ResetPassword(string id)
+        public async Task<IActionResult> ResetPassword(string? id)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -377,11 +376,16 @@ namespace AuthenticationApp.Controllers
             return View(model);
         }
 
-        /// Reset user password
+        // Reset user password
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel? model)
         {
+            if (model == null)
+            {
+                return BadRequest("Invalid model data");
+            }
+
             if (!ModelState.IsValid)
             {
                 return View(model);
@@ -424,11 +428,16 @@ namespace AuthenticationApp.Controllers
             return View(model);
         }
 
-        /// Toggle user lock status
+        // Toggle user lock status
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleLock(string id)
+        public async Task<IActionResult> ToggleLock(string? id)
         {
+            if (string.IsNullOrEmpty(id))
+            {
+                return NotFound();
+            }
+
             try
             {
                 var user = await _userManager.FindByIdAsync(id);
@@ -467,8 +476,13 @@ namespace AuthenticationApp.Controllers
         /// Deletes user and confirms the process
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(string? id)
         {
+            if (string.IsNullOrEmpty(id))
+            {
+                return NotFound();
+            }
+
             try
             {
                 var user = await _userManager.FindByIdAsync(id);
@@ -510,7 +524,7 @@ namespace AuthenticationApp.Controllers
 
             foreach (var role in roles)
             {
-                var usersInRole = await _userManager.GetUsersInRoleAsync(role.Name);
+                var usersInRole = await _userManager.GetUsersInRoleAsync(role.Name ?? string.Empty);
                 roleViewModels.Add(new RoleSelectionViewModel
                 {
                     RoleId = role.Id,
