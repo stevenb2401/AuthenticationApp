@@ -126,18 +126,18 @@ builder.Services.ConfigureApplicationCookie(options =>
         {
             if (context.Principal?.Identity?.IsAuthenticated == true)
             {
-                logger.LogInformation("🍪 Cookie validation successful for user: {User}", 
+                logger.LogInformation("Cookie validation successful for user: {User}", 
                     context.Principal.Identity.Name);
             }
             else
             {
-                logger.LogWarning("🍪 Cookie validation failed - rejecting principal");
+                logger.LogWarning("Cookie validation failed - rejecting principal");
                 context.RejectPrincipal();
             }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "🍪 Error during cookie validation");
+            logger.LogError(ex, "Error during cookie validation");
             context.RejectPrincipal();
         }
         
@@ -147,7 +147,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Events.OnSigningIn = context =>
     {
         var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("🍪 Cookie signing in for user: {User}", 
+        logger.LogInformation("Cookie signing in for user: {User}", 
             context.Principal?.Identity?.Name ?? "Unknown");
         return Task.CompletedTask;
     };
@@ -155,7 +155,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Events.OnSigningOut = context =>
     {
         var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("🍪 Cookie signing out for user: {User}", 
+        logger.LogInformation("Cookie signing out for user: {User}", 
             context.HttpContext.User?.Identity?.Name ?? "Unknown");
         return Task.CompletedTask;
     };
@@ -231,9 +231,9 @@ builder.Services.AddAuthentication(options =>
         OnRedirectToIdentityProvider = context =>
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogInformation("🚀 Redirecting to Azure AD: {AuthorityUrl}", context.Options.Authority);
-            logger.LogInformation("🔑 Client ID: {ClientId}", context.Options.ClientId);
-            logger.LogInformation("🔗 Callback Path: {CallbackPath}", context.Options.CallbackPath);
+            logger.LogInformation("Redirecting to Azure AD: {AuthorityUrl}", context.Options.Authority);
+            logger.LogInformation("Client ID: {ClientId}", context.Options.ClientId);
+            logger.LogInformation("Callback Path: {CallbackPath}", context.Options.CallbackPath);
             
             // Clear any existing authentication
             context.HttpContext.Response.Cookies.Delete("AzureAD.Correlation");
@@ -245,16 +245,16 @@ builder.Services.AddAuthentication(options =>
         OnMessageReceived = context =>
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogInformation("📨 Message received from Azure AD");
+            logger.LogInformation("Message received from Azure AD");
             
             // Log available cookies for debugging
             var correlationCookies = context.Request.Cookies.Where(c => c.Key.Contains("Correlation")).ToList();
-            logger.LogInformation("🍪 Correlation cookies found: {Count}", correlationCookies.Count);
+            logger.LogInformation("Correlation cookies found: {Count}", correlationCookies.Count);
             foreach (var cookie in correlationCookies)
             {
                 var cookieValue = cookie.Value ?? "";
                 var displayValue = cookieValue.Length > 20 ? cookieValue.Substring(0, 20) : cookieValue;
-                logger.LogInformation("🍪 Cookie: {Name} = {Value}", cookie.Key, displayValue);
+                logger.LogInformation("Cookie: {Name} = {Value}", cookie.Key, displayValue);
             }
             
             return Task.CompletedTask;
@@ -265,7 +265,7 @@ builder.Services.AddAuthentication(options =>
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
             var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<IdentityUser>>();
             
-            logger.LogInformation("✓ Azure AD token validated successfully");
+            logger.LogInformation("Azure AD token validated successfully");
             
             try
             {
@@ -277,7 +277,7 @@ builder.Services.AddAuthentication(options =>
                 var objectId = context.Principal?.FindFirst("oid")?.Value ?? 
                               context.Principal?.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
                 
-                logger.LogInformation("📧 User email: {Email}, Name: {Name}, ObjectId: {ObjectId}", email, name, objectId);
+                logger.LogInformation("User email: {Email}, Name: {Name}, ObjectId: {ObjectId}", email, name, objectId);
                 
                 if (!string.IsNullOrEmpty(email))
                 {
@@ -297,17 +297,17 @@ builder.Services.AddAuthentication(options =>
                         
                         if (result.Succeeded)
                         {
-                            logger.LogInformation("✓ Created new local user for Azure AD account: {Email}", email);
+                            logger.LogInformation("Created new local user for Azure AD account: {Email}", email);
                             
                             if (email == "stevenbyrne243@gmail.com")
                             {
                                 await userManager.AddToRoleAsync(newUser, "Admin");
-                                logger.LogInformation("✓ Added Admin role for {Email}", email);
+                                logger.LogInformation("Added Admin role for {Email}", email);
                             }
                             else
                             {
                                 await userManager.AddToRoleAsync(newUser, "User");
-                                logger.LogInformation("✓ Added User role for {Email}", email);
+                                logger.LogInformation("Added User role for {Email}", email);
                             }
                             
                             existingUser = newUser;
@@ -321,7 +321,7 @@ builder.Services.AddAuthentication(options =>
                     }
                     else
                     {
-                        logger.LogInformation("✓ Found existing local user for Azure AD account: {Email}", email);
+                        logger.LogInformation("Found existing local user for Azure AD account: {Email}", email);
                     }
                     
                     // Add role claims
@@ -342,11 +342,11 @@ builder.Services.AddAuthentication(options =>
                         
                         identity.AddClaim(new Claim("LocalUserId", existingUser.Id));
                         
-                        logger.LogInformation("✓ Added local roles for {Email}: {Roles}", email, string.Join(", ", userRoles));
+                        logger.LogInformation("Added local roles for {Email}: {Roles}", email, string.Join(", ", userRoles));
                     }
                 }
                 
-                logger.LogInformation("🔍 Authentication completed successfully for {Email}", email);
+                logger.LogInformation("Authentication completed successfully for {Email}", email);
             }
             catch (Exception ex)
             {
@@ -358,7 +358,7 @@ builder.Services.AddAuthentication(options =>
         OnAuthenticationFailed = context =>
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogError(context.Exception, "✗ Azure AD authentication failed: {Error}", context.Exception?.Message);
+            logger.LogError(context.Exception, "Azure AD authentication failed: {Error}", context.Exception?.Message);
             
             // Clear problematic cookies
             context.HttpContext.Response.Cookies.Delete("AzureAD.Correlation");
@@ -374,7 +374,7 @@ builder.Services.AddAuthentication(options =>
         OnRemoteFailure = context =>
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogError("✗ Azure AD remote failure: {Error}", context.Failure?.Message);
+            logger.LogError("Azure AD remote failure: {Error}", context.Failure?.Message);
             
             // Clear all authentication cookies
             var cookiesToClear = new[]
@@ -402,7 +402,7 @@ builder.Services.AddAuthentication(options =>
 // REGISTER AUTHORIZATION HANDLERS
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 
-// AUTHORIZATION POLICIES - Temporarily disabled fallback policy
+// AUTHORIZATION POLICIES - FIXED SYNTAX ERRORS
 builder.Services.AddAuthorization(options =>
 {
     // TEMPORARILY DISABLE fallback policy to stop authentication loop
@@ -426,6 +426,22 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("Admin")); 
 
     options.AddPolicy("RequireLocalUser", policy =>
+        policy.RequireRole("User", "Admin"));
+
+    // MISSING POLICIES THAT WERE CAUSING ERRORS
+    options.AddPolicy("Admin", policy =>
+        policy.RequireRole("Admin", "Administrator", "Global Administrator"));
+
+    options.AddPolicy("Manager_or_Admin", policy =>
+        policy.RequireRole("Manager", "Admin", "Administrator"));
+
+    options.AddPolicy("HR_Access", policy =>
+        policy.RequireRole("HR", "Human Resources", "HR Manager"));
+
+    options.AddPolicy("Local_Admin", policy =>
+        policy.RequireRole("Admin"));
+
+    options.AddPolicy("Local_User", policy =>
         policy.RequireRole("User", "Admin"));
         
     // COMBINED POLICIES for flexibility
@@ -510,7 +526,7 @@ app.Use(async (context, next) =>
     if (context.Request.Query.ContainsKey("error") && 
         (context.Request.Query["error"] == "auth_failed" || context.Request.Query["error"] == "azure_auth_failed"))
     {
-        logger.LogInformation("🧹 Clearing authentication cookies due to error");
+        logger.LogInformation("Clearing authentication cookies due to error");
         
         // Clear ALL possible authentication cookies
         var cookiesToClear = new[]
@@ -530,7 +546,7 @@ app.Use(async (context, next) =>
         {
             if (context.Request.Cookies.ContainsKey(cookie))
             {
-                logger.LogInformation("🗑️ Deleting cookie: {Cookie}", cookie);
+                logger.LogInformation("Deleting cookie: {Cookie}", cookie);
                 context.Response.Cookies.Delete(cookie, new CookieOptions
                 {
                     Path = "/",
@@ -552,7 +568,7 @@ app.Use(async (context, next) =>
     // Enhanced callback processing
     if (context.Request.Path == "/signin-oidc" && context.Request.Method == "POST")
     {
-        logger.LogInformation("🔍 Processing Azure AD callback");
+        logger.LogInformation("Processing Azure AD callback");
         
         // Check for correlation cookies
         var hasCorrelationCookie = context.Request.Cookies.Keys
@@ -560,7 +576,7 @@ app.Use(async (context, next) =>
             
         if (!hasCorrelationCookie)
         {
-            logger.LogWarning("⚠️ No correlation cookie found for callback - this might cause correlation failure");
+            logger.LogWarning("No correlation cookie found for callback - this might cause correlation failure");
         }
     }
     
@@ -571,7 +587,7 @@ app.Use(async (context, next) =>
 app.Use(async (context, next) =>
 {
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("🌐 Request: {Method} {Path}, IsAuthenticated: {IsAuth}, User: {User}, Claims: {Claims}", 
+    logger.LogInformation("Request: {Method} {Path}, IsAuthenticated: {IsAuth}, User: {User}, Claims: {Claims}", 
         context.Request.Method,
         context.Request.Path,
         context.User?.Identity?.IsAuthenticated ?? false,
@@ -587,39 +603,6 @@ app.UseRouting();
 
 app.UseAuthentication();
 
-// OPTIONAL: Nuclear option middleware (uncomment if still having issues)
-/*
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path == "/signin-oidc" && context.Request.Method == "POST")
-    {
-        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("🔧 Nuclear option: Injecting correlation cookie for debugging");
-        
-        // This is a temporary workaround - inject a fake correlation cookie
-        var correlationCookieName = "AzureAD.Correlation";
-        if (!context.Request.Cookies.ContainsKey(correlationCookieName))
-        {
-            // Extract state parameter to find correlation ID
-            var stateParam = context.Request.Form["state"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(stateParam))
-            {
-                // Create a minimal correlation cookie
-                context.Response.Cookies.Append(correlationCookieName, "temp-correlation-value", new CookieOptions
-                {
-                    SameSite = SameSiteMode.None,
-                    Secure = false,
-                    HttpOnly = false
-                });
-                logger.LogInformation("🔧 Injected temporary correlation cookie");
-            }
-        }
-    }
-    
-    await next();
-});
-*/
-
 // Additional debugging middleware after authentication
 app.Use(async (context, next) =>
 {
@@ -627,14 +610,14 @@ app.Use(async (context, next) =>
     
     if (context.Request.Path.StartsWithSegments("/signin-oidc"))
     {
-        logger.LogInformation("🎯 /signin-oidc request AFTER auth middleware: {Method} {Path}", 
+        logger.LogInformation("/signin-oidc request AFTER auth middleware: {Method} {Path}", 
             context.Request.Method, context.Request.Path);
-        logger.LogInformation("🔐 Authentication result: {IsAuth}", context.User?.Identity?.IsAuthenticated);
+        logger.LogInformation("Authentication result: {IsAuth}", context.User?.Identity?.IsAuthenticated);
         
         // If this is a POST and we're still not authenticated, something went wrong
         if (context.Request.Method == "POST" && context.User?.Identity?.IsAuthenticated != true)
         {
-            logger.LogWarning("⚠️ POST to /signin-oidc but still not authenticated");
+            logger.LogWarning("POST to /signin-oidc but still not authenticated");
         }
     }
     

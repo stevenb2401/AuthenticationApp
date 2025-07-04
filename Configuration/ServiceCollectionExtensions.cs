@@ -6,10 +6,6 @@ namespace AuthenticationApp.Configuration
     /// Extension methods for configuring Azure AD with validation
     public static class ServiceCollectionExtensions
     {
-        /// Adds and validates Azure AD configuration
-        /// <param name="services">Service collection</param>
-        /// <param name="configuration">Application configuration</param>
-        /// <returns>Service collection for chaining</returns>
         public static IServiceCollection AddAzureAdConfiguration(
             this IServiceCollection services, 
             IConfiguration configuration)

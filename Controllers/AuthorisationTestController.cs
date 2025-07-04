@@ -20,7 +20,6 @@ namespace AuthenticationApp.Controllers
         {
             _logger.LogInformation("Authorisation test dashboard accessed by user: {User}", User.Identity?.Name);
 
-            // Only test policies that actually exist in Program.cs
             var policies = new[]
             {
                 "Admin", "Manager_or_Admin", "HR_Access",  

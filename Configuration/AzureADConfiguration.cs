@@ -5,22 +5,18 @@ namespace AuthenticationApp.Configuration
     /// Configuration class for Azure Active Directory settings with validation
     public class AzureAdConfiguration
     {
-        /// Azure AD instance URL
         [Required(ErrorMessage = "Azure AD Instance is required")]
         [Url(ErrorMessage = "Instance must be a valid URL")]
         public string Instance { get; set; } = "https://login.microsoftonline.com/";
 
-        /// Azure AD tenant domain
         [Required(ErrorMessage = "Domain is required")]
         public string Domain { get; set; } = string.Empty;
 
-        /// Azure AD tenant ID
         [Required(ErrorMessage = "TenantId is required")]
         [RegularExpression(@"^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$",
             ErrorMessage = "TenantId must be a valid GUID")]
         public string TenantId { get; set; } = string.Empty;
 
-        /// Azure AD application client ID
         [Required(ErrorMessage = "ClientId is required")]
         [RegularExpression(@"^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$",
             ErrorMessage = "ClientId must be a valid GUID")]
@@ -29,11 +25,9 @@ namespace AuthenticationApp.Configuration
         /// Client secret for confidential client applications
         public string ClientSecret { get; set; } = string.Empty;
 
-        /// Callback path for authentication responses
         [Required(ErrorMessage = "CallbackPath is required")]
         public string CallbackPath { get; set; } = "/signin-oidc";
 
-        /// Scopes required for Microsoft Graph API access
         public string[] Scopes { get; set; } = { "User.Read" };
 
         /// Validates the Azure AD configuration
@@ -89,7 +83,6 @@ namespace AuthenticationApp.Configuration
         }
 
         /// Checks if the configuration is ready for production use
-        /// <returns>True if production-ready, false otherwise</returns>
         public bool IsProductionReady()
         {
             return !string.IsNullOrEmpty(ClientSecret) &&

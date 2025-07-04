@@ -29,10 +29,9 @@ namespace AuthenticationApp.Controllers
         {
             try
             {
-                // Initialize search model
+                // Initialises the search model
                 if (model == null) model = new UserSearchViewModel();
 
-                // Build query
                 var query = _userManager.Users.AsQueryable();
 
                 // Apply search filters
@@ -77,7 +76,7 @@ namespace AuthenticationApp.Controllers
                 // Get total count for pagination
                 model.TotalResults = await query.CountAsync();
 
-                // Apply pagination
+                // Implement pagination
                 var users = await query
                     .Skip((model.CurrentPage - 1) * model.PageSize)
                     .Take(model.PageSize)

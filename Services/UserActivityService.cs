@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 namespace AuthenticationApp.Services
 {
-    // Custom Telemetry Initializer
+    // Custom Telemetry Initialiser
     public class UserTelemetryInitializer : ITelemetryInitializer
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -30,13 +30,13 @@ namespace AuthenticationApp.Services
                     telemetry.Context.User.Id = userId;
                     telemetry.Context.User.AuthenticatedUserId = userEmail ?? userId;
                     
-                    // Add custom properties
+                    // Adds custom properties
                     if (telemetry is ISupportProperties telemetryWithProperties)
                     {
                         telemetryWithProperties.Properties["AuthenticationMethod"] = authMethod;
                         telemetryWithProperties.Properties["UserEmail"] = userEmail ?? "Unknown";
                         
-                        // Track user roles
+                        // Tracks user roles
                         var roles = httpContext.User.FindAll(ClaimTypes.Role)
                             .Union(httpContext.User.FindAll("roles"))
                             .Select(c => c.Value)
@@ -129,7 +129,7 @@ namespace AuthenticationApp.Services
             eventTelemetry.Properties["AdminUserId"] = adminUserId;
             eventTelemetry.Properties["TargetUserId"] = targetUserId;
             eventTelemetry.Properties["Role"] = role;
-            eventTelemetry.Properties["Action"] = action; // "Assigned" or "Removed"
+            eventTelemetry.Properties["Action"] = action;
             eventTelemetry.Properties["Timestamp"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
             _telemetryClient.TrackEvent(eventTelemetry);
